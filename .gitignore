@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+
+.env
+.env.*
+!.env.example
+
+# Product repositories are physically nested but versioned independently.
+/repos/*/

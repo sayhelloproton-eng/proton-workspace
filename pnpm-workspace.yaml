@@ -1,0 +1,3 @@
+# Root workspace only manages packages owned by proton-workspace.
+# Product repositories under repos/** are intentionally excluded.
+packages: []
