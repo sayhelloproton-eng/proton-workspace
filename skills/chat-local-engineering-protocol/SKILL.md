@@ -1,224 +1,359 @@
 ---
 name: chat-local-engineering-protocol
-description: Scenario-aware protocol only for ChatGPT Chat orchestrating proton-workspace local engineering. Keep the phase lock and whole-file mutation invariant, but route each Engineering Decision through the minimum-sufficient evidence, cheapest authoritative primitive, and fewest safe round trips.
+description: High-throughput protocol for ChatGPT Chat orchestrating proton-workspace local engineering with hard phase locks, whole-file mutation, authoritative tools, and evidence-driven self-improvement.
 ---
 
 # Chat 本机工程协议
 
 This Skill is the single rule owner for **ChatGPT Chat ↔ Local Machine** engineering under `/Users/agent/Desktop/proton-workspace`.
-Repository rules may be stricter, but may not weaken these invariants. Reference files explain this Skill; they never define a second mutation model.
+References explain rules or preserve evidence; they do not define a second protocol.
 
-## Applicability scope — HARD RULE
+## Scope and authority — HARD RULE
 
-This Skill applies only when **ChatGPT Chat** orchestrates Local engineering through tools such as CodeGraph, Repomix, Local Dev, or Playwright/AX.
-It does **not** govern Codex/GPT-6 Codex sessions, Codex app/CLI/app-server/runtime, or other autonomous coding agents unless the user explicitly opts them in.
-Never modify Codex configuration, AGENTS.md, Codex skills, CLI hooks, or shell environment to enforce this Chat protocol.
+This Skill applies only when **ChatGPT Chat** orchestrates Local engineering through CodeGraph, Repomix, Local Dev, Playwright/AX, or equivalent tools. It does not govern Codex app/CLI/app-server/runtime or other autonomous coding agents unless the user explicitly opts them in.
 
-## Invariant kernel — HARD RULE
+Before any Local engineering action, Chat MUST use Local Dev to read the current Local copy of this Skill and use that content as the execution protocol for the task.
+
+Authority for the shared protocol:
+
+```text
+current Local SKILL.md
+> stricter repository-local constraints
+> project bootstrap instruction
+> handoff / historical chat / reference / cached context
+```
+
+Repository rules may add stricter constraints but may not weaken this protocol. Project instructions should only bootstrap/enforce loading this Skill. Never modify Codex configuration, Codex skills, hooks, shell environment, or AGENTS.md merely to enforce this Chat-only protocol.
+
+## Phase lock — HARD RULE
 
 ```text
 ACQUIRE → FROZEN → BUNDLE_READY → APPLIED → VERIFY → DONE
 ```
 
-- The mutation unit is one **Engineering Decision**, never one file or hunk.
-- Local never decides source edits. Chat supplies complete next-version files; Local only performs mechanical whole-file CREATE/REPLACE/DELETE and real verification.
-- Preserve unrelated WIP. Never stage, clean, overwrite, or commit unless explicitly authorized.
-- After FROZEN, `LSR_AFTER_SNAPSHOT = 0` unless named evidence reopens ACQUIRE.
-- Normal target: `LMR = 1`, one VERIFY start, no per-file mutation loop.
+Core invariants:
+- one **Engineering Decision** is the mutation unit; file count is not;
+- Chat owns semantic design and complete next-version files;
+- Local performs only mechanical whole-file CREATE/REPLACE/DELETE plus real verification;
+- preserve unrelated WIP; never stage, clean, overwrite unrelated work, or commit without explicit authorization;
+- after FROZEN, `LSR_AFTER_SNAPSHOT = 0` unless named evidence reopens ACQUIRE;
+- `BUNDLE_READY` means all complete next-version files, semantic operations, expected state, verification plan, self-review, and the token-independent envelope body are final; only deterministic substitution of the runner-issued token may remain;
+- the frozen runner MUST NOT start before `BUNDLE_READY`;
+- normal targets: `LMR = 1`, one VERIFY start, no per-file mutation loop.
 
 ## Throughput objective
 
-Primary KPI is **USER_PERCEIVED_WALL**: user request → completed engineering result.
+Primary KPI:
 
 ```text
-MAX_THROUGHPUT
-= right fact owner
-× cheapest authoritative primitive
-× minimum-sufficient context
-× minimum safe transactions
-× one coherent Engineering Decision
+USER_PERCEIVED_WALL
+= Chat reasoning/context/orchestration
++ Tool/transport wall
++ Local compute
++ recovery/retry tax
++ harness/setup/transport mistakes
 ```
 
-A tool call is justified only when its evidence can change the current decision.
+Optimize the highest-weight avoidable tax first. Local filesystem speed is only a component, not a substitute for user-perceived throughput. A tool call is justified only when its evidence can change the current decision.
 
-## ACQUIRE — Acceptance first, implementation minimal
-
-ACQUIRE is one phase, not one literal tool call. Preferred internal order:
+For per-turn accounting, use one compact `phaseTimingsMs` object with canonical keys:
 
 ```text
-FULL ACCEPTANCE EVIDENCE
-→ DISCOVER owner / seam / blast radius
-→ MINIMAL IMPLEMENTATION CONTEXT
+bootstrap, caseSetup, acquire, semantic, bundle, apply, verify, recovery, postDone
+```
+
+Each value is directly observed wall milliseconds or `null`; never invent precision or convert model intuition into fake timing. `caseSetup` is benchmark/replay preparation, not part of the measured Engineering Decision, but if it happens inside the same user turn it still contributes to `USER_PERCEIVED_WALL` and must remain visible.
+
+Do not create extra Tool calls merely to measure phases. Reuse existing Tool/process telemetry and naturally available phase boundaries. Unmeasured time stays unattributed for later batch review instead of being guessed.
+
+## ACQUIRE — acceptance first, implementation minimal
+
+Preferred order:
+
+```text
+acceptance / failing proof / contract
+→ owner / seam / blast-radius discovery
+→ minimum implementation context
 → lock Engineering Decision
-→ FULL SOURCE only for actual changed files
+→ complete source for actual REPLACE files
 → FROZEN
 ```
 
-- Acceptance criteria, failing proof, regression tests, contracts, and user intent come before broad implementation detail when available.
-- Candidate scope may be conservative; **reasoning context should be narrow**.
-- Do not load every candidate file in full merely because it might be related.
-- Once actual changed files are known, acquire their complete source before FROZEN.
-- CREATE files have no baseline source; their contract/dependency evidence must still be complete.
+Rules:
+- ACQUIRE is one phase, not one literal tool call.
+- Candidate scope may be conservative; reasoning context should be minimum-sufficient.
+- Do not load every candidate file merely because it might be related.
+- CREATE files need complete contract/dependency evidence even though no baseline source exists.
 
-## Scenario router
+### Scenario routing
 
-### S1 — KNOWN_SCOPE_SMALL
-Known scope; files can be returned completely by native reads.
+- **S1 KNOWN_SCOPE_SMALL** — Local authority → one native batch source read → FROZEN.
+  - with 2+ known source paths, the first source-read operation MUST be `read_multiple_files`;
+  - no preflight `read_file/get_file_info/grep/shell` probes merely to confirm known paths;
+  - explicit truncation is evidence to reclassify to S2.
+- **S2 KNOWN_SCOPE_LARGE** — Local authority → Repomix exact snapshot → FROZEN.
+- **S3 UNKNOWN_SCOPE / CROSS_MODULE** — one structure-discovery round + one current-filesystem discovery round by default → minimal seams → one batch complete changed-file source → FROZEN. Extra discovery requires a named evidence gap that can change the Decision.
+- **S4 VERIFY_FAILURE** — Failure First → repair from frozen context → targeted reverify; reopen only if new source is genuinely required.
+- **S5 TIMEOUT / UNKNOWN** — continue same PID/session first; recover authority only if unavailable; never blind retry.
+- **S6 RUNTIME / BROWSER** — route by fact owner: formal CLI/runtime for lifecycle, Local for PID/port/process/log, Playwright/AX for UI/Console/Network.
+- **S7 SOURCE_DRIFT / CONCURRENT_WIP** — final HEAD/branch/file-fingerprint gate lives inside the single APPLY transaction and fails closed before mutation.
 
-`Local authority → ONE native batch source read → FROZEN → Chat → ONE APPLY → ONE VERIFY`
+### Tool ownership
 
-**Batch-first execution gate — HARD:**
-- With 2+ known source paths, the first source-read operation MUST be one `read_multiple_files` call.
-- Do not call `read_file`, `get_file_info`, `grep`, or shell commands first merely to probe line count, relevance, completeness, or “confirm” a known path.
-- If the batch result itself reports truncation/remaining lines, that is evidence to reclassify the task as S2 and use an exact snapshot transport.
-- `KNOWN_SCOPE_PREFLIGHT_PROBES = 0`.
-
-For one known file, read it directly once; if the result explicitly reports truncation, switch to S2. Do not perform a separate one-line probe.
-
-### S2 — KNOWN_SCOPE_LARGE
-Known scope contains files that native reads truncate or paginate.
-
-`Local authority → Repomix exact full snapshot → FROZEN → Chat → ONE APPLY → ONE VERIFY`
-
-Repomix compressed output may assist discovery, but it is not a mutation-grade FROZEN snapshot.
-
-### S3 — UNKNOWN_SCOPE / CROSS_MODULE
-Blast radius is not credible yet.
-
-`CodeGraph structure + Local native search + current WIP paths → minimal seams → actual changed-file full source → FROZEN`
-
-CodeGraph owns structure, not complete textual candidate discovery. Native search owns current filesystem hits, including untracked WIP, not architecture. Combine their evidence when both are needed.
-
-### S4 — VERIFY_FAILURE
-Default route is not re-acquisition:
-
-`Failure First → frozen-context repair → ONE repair bundle → failed proof only`
-
-Reopen ACQUIRE only when the failure requires source outside the frozen package.
-
-### S5 — TIMEOUT / UNKNOWN
-
-`same PID/session continuation → authority recovery only if session unavailable → never blind retry`
-
-Timeout is not proof of failure.
-
-### S6 — RUNTIME / BROWSER
-Route by fact domain:
-- platform readiness/lifecycle → formal owner CLI or runtime authority;
-- PID/port/process/health mismatch → Local runtime authority;
-- Web UI/AX/Console/Network → Playwright/AX;
-- browser-extension evidence unavailable in active context → `ENV_UNAVAILABLE`, never fabricate a negative conclusion.
-
-Runtime mismatch is not a reason to guess from source.
-
-### S7 — SOURCE_DRIFT / CONCURRENT WIP
-Capture authority during ACQUIRE. Put final compatible HEAD/WIP/fingerprint checking **inside the ONE APPLY transaction**.
-Mismatch → `SOURCE_DRIFT` → fail closed with zero mutation.
-
-## Tool primitive policy
-
-- CodeGraph: ownership, symbol relations, caller/callee, dependency, blast radius.
-- Local native read/search APIs: ordinary known-file source and filesystem/content search.
-- Repomix exact: complete large/broad mutation-grade source snapshot.
-- Repomix compressed: low-token structural discovery only.
-- Local process: Git authority, bundle apply, test/build/typecheck/lint/benchmark, runtime/PID/log.
+- CodeGraph: ownership, caller/callee, dependency, blast radius.
+- Local native read/search: ordinary current filesystem/source evidence.
+- Repomix exact: large/broad mutation-grade complete snapshot.
+- Repomix compressed: structural discovery only.
+- Local process: Git authority, apply runner, tests/build/typecheck/lint/benchmark, PID/log/runtime.
 - Playwright/AX: browser/UI/network/console reality.
 
-**Do not wrap ordinary read/search in `start_process` when a native API can answer it.** Do not add per-file probes before a known-scope batch read. Process transport is reserved for real process semantics.
+Do not wrap ordinary read/search in `start_process` when a native API can answer it.
 
-## FROZEN
+### Decision transaction discipline — DEFAULT
 
-When acceptance evidence, dependency evidence, and complete source for actual changed files are sufficient, immediately enter FROZEN.
+After scenario classification, buy at most one discovery round per unresolved fact domain by default. Batch adjacent evidence into the same authoritative transaction when possible. Any additional discovery/search/read round MUST have a named evidence gap whose answer can change scope, design, or verification; “more confidence” alone is not enough.
 
-`LSR_AFTER_SNAPSHOT = 0`.
+For benchmark/replay work, case selection and environment preparation are outside the measured Engineering Decision unless the acceptance criteria themselves require them. Prepare the case package first; do not spend measured ACQUIRE on broad Git-history browsing, repository cloning, dependency re-materialization, or teardown that is unrelated to the Decision. If such setup is genuinely required, record it separately as benchmark/setup cost.
 
-Only these evidence triggers reopen ACQUIRE:
+A hidden oracle may hide the historical implementation and expected output details, but it MUST NOT introduce a new requirement. Any public symbol, contract, side effect, ordering rule, or compatibility behavior required for PASS must already be stated in acceptance or mechanically derivable from the supplied contract. If the first oracle failure reveals a requirement that was not available before FROZEN, invalidate that benchmark sample as `HARNESS_HIDDEN_REQUIREMENT`; do not score the resulting repair loop as model quality.
+
+### Local process fast path
+
+For short non-interactive mechanical commands that do not require zsh-specific syntax/profile state, prefer an explicit lightweight shell such as `/bin/sh` when supported. Do not change the user's global default shell for this protocol. Shell-path stalls are runtime/recovery evidence, not a reason to reopen source acquisition.
+
+### Repomix context hygiene — HARD RULE
+
+When Repomix is selected:
+- prefer `includePatterns` when scope is known;
+- explicitly recurse-ignore at least `**/node_modules/**`, `**/.git/**`, `**/.next/**`, `**/dist/**`, `**/build/**`, `**/coverage/**`, plus known repository-specific generated/cache trees;
+- do not rely only on `.gitignore` or Repomix built-ins;
+- never filter out acceptance evidence or complete source required for changed files.
+
+## FROZEN — HARD RULE
+
+Enter FROZEN as soon as evidence is sufficient. Then `LSR_AFTER_SNAPSHOT = 0`.
+
+Only these triggers reopen ACQUIRE:
 - `SOURCE_DRIFT`
 - `VERIFICATION_FAILURE_REQUIRING_NEW_SOURCE`
 - `RUNTIME_REALITY_MISMATCH`
 - `EVIDENCE_TRIGGERED_SCOPE_EXPANSION`
 
-Uncertainty, caution, curiosity, “one more grep”, or confirmation are not evidence.
+Uncertainty, caution, curiosity, or “one more grep” are not evidence.
 
-## BUNDLE_READY — Whole-file Bundle Replacement
+## BUNDLE_READY and APPLIED — Whole-file Bundle Replacement
 
-Chat produces complete next versions for every changed file:
+Chat emits complete next-version files with semantic operations. Local harness derives transport metadata:
 
 ```text
-changed-files/
-  path/to/a.ts
-  path/to/b.ts
-manifest.json   # only when DELETE is required
-→ changed-files.tar
+Chat: complete file + CREATE/REPLACE, or DELETE path
+Local: manifest.json + changed-files.tar + receipt.json
+Authority: expected-state.json
+Verification: verification-plan.json
 ```
 
-Operations are only `CREATE / REPLACE / DELETE`; rename is normally `CREATE + DELETE`. Even one changed file uses the same bundle model.
-Normal path forbids model-authored patch/unified diff, MCP per-file edit loops, line/hunk mutation, anchor hunting, and Local sed/Python/string transformers that decide source changes.
+Rename is normally `CREATE new + DELETE old`. Even one changed file uses the same model.
 
-### Deterministic materialization preference
+### Data Plane / Control Plane — HARD RULE
 
-Semantic design remains Chat-owned. When available, use a **Chat-side deterministic whole-file materializer** to preserve unchanged bytes from frozen complete source while producing the complete next-version file. Local still receives only complete file bytes and never a patch recipe.
-If unavailable, Chat still produces complete files and treats unintended formatting-only drift as a BUNDLE_READY defect.
+Data Plane carries complete file bytes, semantic operations, authority, and verification intent. Control Plane is only a short stable-runner invocation. Internal manifest/tar representation belongs to Local deterministic mechanics, not Chat.
 
-## APPLIED
+Normal path forbids:
+- model-authored patch/unified diff as mutation transport;
+- MCP per-file edit/line/hunk/anchor loops;
+- Local sed/Python/string transformers that decide source changes;
+- source text, tar bytes, large base64, or heredocs embedded in shell commands;
+- ad-hoc apply harnesses rewritten per Decision;
+- model-authored `chat-local-manifest.v1` on the default streaming/frozen path.
 
-One Engineering Decision targets one Local mutation round trip: `LMR = 1`.
+Preferred transport:
 
-`authority/fingerprint gate → extract/copy whole files → manifest deletes → git diff --check → changed-path summary`
+```text
+complete files + CREATE/REPLACE/DELETE operations
++ expected state + verification plan
+→ one stable frozen-decision runner
+→ receiver derives manifest and materializes changed-files.tar
+→ authority/fingerprint-gated whole-file apply
+→ batched targeted verify
+→ deterministic terminal receipt/prompt
+```
 
-Apply contains no source-design logic. Drift failure performs zero mutation.
+### Streaming whole-file envelope — DEFAULT FAST PATH
+
+When Local Dev exposes an interactive process channel and changed payloads are UTF-8/LF text, start the stable receiver `scripts/materialize-whole-file-envelope.mjs` once, then send **all** complete next-version files with their `CREATE|REPLACE` operation, any `DELETE` paths, expected state, and verification plan through one `interact_with_process` stdin envelope.
+
+Default wire semantics are operation-oriented: `FILE <token> <CREATE|REPLACE> <path> ... END <token>` and `DELETE <token> <path>`. The receiver derives canonical `chat-local-manifest.v1` locally. Chat MUST NOT serialize that manifest on the default path. A legacy `FILE <token> <path>` + `MANIFEST` mode may remain only for compatibility with already-prepared transports and must not be selected for new Decisions.
+
+Source bytes in this path are Data Plane stdin, never shell-command payload. The receiver is prompt-aware so process startup/interaction can return on a deterministic `>` prompt instead of waiting for generic timeout detection. Normal target: one envelope payload transaction per Engineering Decision, then one stable apply invocation. Do not split a 200-line file into 7–10 model↔tool write transactions when the streaming receiver is available.
+
+The streaming receiver intentionally supports UTF-8 text normalized to LF with a final newline. Binary or line-ending-sensitive files require a binary-safe transport; do not force them through the text envelope. Native chunked file-write remains a fallback only when the receiver transport is unavailable or unsuitable.
+
+### Frozen execution control plane — DEFAULT FAST PATH
+
+When complete next-version files, expected state, and targeted verification are all known at FROZEN, finish self-review and construct the complete token-independent operation envelope first. Only after entering `BUNDLE_READY` may Chat start `scripts/execute-frozen-decision.mjs`.
+
+After the runner emits `ENVELOPE_READY=<token>` / `chat-local>`, the **next Local tool transaction MUST be the one `interact_with_process` payload send**. Between ready marker and payload send there must be zero source reads, searches, schema discovery, plan changes, verification redesign, runner/interface reads, or model-driven polling. Runtime-token substitution is the only allowed preparation after ready.
+
+After that envelope, the stable Local runner owns the mechanical chain `derive manifest → materialize → apply → verify → receipt`; Chat MUST NOT re-enter between those steps merely to choose runner paths, staging paths, internal manifest fields, apply arguments, or verify commands again.
+
+The frozen-decision runner must emit `chat-local-result>` on every terminal PASS / FAIL / UNKNOWN path before process exit. Treat that marker as the deterministic control-return boundary so Chat can receive terminal evidence without waiting for delayed PTY/process-exit detection. Preserve failure evidence; clean temporary staging only after terminal PASS unless explicitly requested otherwise.
+
+Normal target for this path: one process start + one envelope interaction, `DATA_PLANE_PAYLOAD_TRANSACTIONS=1`, `MODEL_AUTHORED_MANIFEST=0`, `LMR=1`, `VERIFY_START=1`, `READY_TO_PAYLOAD_INTERVENING_TOOL_CALLS=0`, and zero model re-entry between mechanical apply/verify steps. Record `RUNNER_READY_TO_PAYLOAD_GAP_MS` when naturally observable; do not add timing-only calls. The deterministic process criterion is zero intervening Local tool calls, not an artificial millisecond SLA.
+
+If this runner is unavailable or unsuitable, fall back to the lower-level receiver + stable apply + verify path without changing the Whole-file mutation model.
+
+If binary archive upload is unavailable and the streaming receiver cannot be used, native file-write may place **complete next-version files only** into Local temp staging before mechanical tar creation. This fallback changes Data Plane calls but does not change `LMR=1` and must never write repository source directly.
+
+Stable apply semantics live in `scripts/apply-whole-file-bundle.mjs`. The runner may validate repo/branch/HEAD/file fingerprints, paths/checksums, unpack/copy/delete whole files, run `git diff --check`, and write a receipt. It must contain zero source-design logic.
+
+On mutation `TIMEOUT / UNKNOWN`, preserve transport/evidence and recover the prior outcome before any retry or cleanup.
 
 ## VERIFY
 
-All real tests/build/typecheck/lint/benchmark run on the user's Local machine.
-- Start once and keep PID/session/log authority.
-- Prefer concise PASS output; return detailed failure proof first.
-- Sample long tasks only when a result can change a decision.
-- Frozen context sufficient → repair without source re-read.
-- After repair rerun only affected proofs.
-- Full Suite is a Stage Gate, never a debugging loop.
+All real test/build/typecheck/lint/benchmark work runs on the user's Local machine.
+
+- start once; keep PID/session/log authority;
+- Failure First: return concise failing proof/path/stack/stderr;
+- if frozen context is sufficient, repair without source reread;
+- rerun only affected proofs after repair;
+- Full Suite is a Stage Gate, not a debugging loop;
+- sample long tasks only when the result has decision value; do not poll merely to learn “still running”.
 
 ## Performance gates
 
 Normal targets, not cross-repository promises:
-- known scope / ordinary implementation: **1–3 min** user wall;
+- known scope / ordinary: **1–3 min** user wall;
 - known scope / large source: **2–4 min**;
-- unknown cross-module decision: **3–5 min**;
-- frozen-context repair: **+1–2 min**;
-- genuinely complex architecture decision: **5–10 min**.
+- unknown cross-module: **3–5 min**;
+- frozen repair: **+1–2 min**;
+- genuinely complex architecture: **5–10 min**.
 
-Routine work exceeding 10 minutes is a throughput failure until attributed to real reasoning/runtime rather than avoidable orchestration.
+Routine work over 10 minutes is a throughput failure until attributable to unavoidable reasoning/runtime rather than orchestration waste.
 
-Hard metrics:
+Hard process metrics:
 - `LSR_AFTER_SNAPSHOT = 0`
 - `LMR_PER_DECISION = 1` target
 - normal `VERIFY_START = 1`
 - `KNOWN_SCOPE_PREFLIGHT_PROBES = 0`
 - per-file mutation loops = 0
 - blind retries = 0
-- shell-wrapped ordinary read/search = 0 when native primitive exists
+- shell-embedded mutation payload = 0
+- normal streaming `DATA_PLANE_PAYLOAD_TRANSACTIONS = 1`
+- normal streaming `MODEL_AUTHORED_MANIFEST = 0`
+- normal frozen `READY_TO_PAYLOAD_INTERVENING_TOOL_CALLS = 0`
+- record `RUNNER_READY_TO_PAYLOAD_GAP_MS` when naturally observable
+- normal frozen control-plane model re-entry between mechanical steps = 0
 - Full Suite inside debugging loop = 0
+- `POST_DONE_REVIEW = 1` for every real Local Engineering Decision
+- `THROUGHPUT_LEDGER_RECORD = 1` for every user turn that performs Local engineering under this Skill
+
+## Throughput benchmark and Skill evolution — HARD RULE
+
+Throughput testing and protocol evolution are separate loops. Do not mutate the benchmark fixture, mutate this Skill, and score the same replay as one mixed experiment.
+
+### Throughput benchmark loop
+
+Use this sequence:
+
+```text
+PREPARE_CASE → FREEZE_FIXTURE → CLEAN_REPLAY → CAPTURE_UI_WALL
+→ ATTRIBUTE → SCORE → DECIDE_NEXT_ACTION
+```
+
+Rules:
+- case preparation, baseline restoration, harness repair, dependency setup, and hidden-oracle fairness checks happen before the measured replay;
+- freeze the case inputs/acceptance/authority/verification contract before replay and do not “fix the benchmark” inside the measured Decision;
+- when evaluating one optimization hypothesis, replay the same representative case before switching to a new case;
+- always score three independent axes: `RESULT_CORRECTNESS`, `PROCESS_CORRECTNESS`, `THROUGHPUT`;
+- `THROUGHPUT` is `PENDING_UI` until a real user-visible wall is available; Local compute or observable-path timings alone cannot declare the user-wall gate PASS;
+- append a later `WALL_UPDATE` when the Chat UI wall becomes available;
+- attribute only directly observed timings. After wall resolution, `UNATTRIBUTED_WALL_MS = USER_PERCEIVED_WALL - sum(observed attributable wall)` may be derived, but its internal composition must not be guessed;
+- explicitly separate harness/setup defects, Local/runtime variance, runner-ready-to-payload gaps, model/Chat orchestration, and accepted unattributed wall;
+- if the user explicitly accepts a remaining unattributed wall as an acceptable cost, record that decision and stop investigating it unless it later regresses or blocks the target.
+
+### Skill evolution loop
+
+Organize each protocol iteration as one causal experiment:
+
+```text
+EVIDENCE → HYPOTHESIS → ONE_SKILL_DECISION → SELF_HOST
+→ SAME_CASE_REPLAY → COMPARE → KEEP / REVERT / FREEZE
+```
+
+Rules:
+- one iteration should target one dominant, causally supported failure family or invariant; do not batch unrelated “improvements” merely because the Skill is already open;
+- classify the owner before changing rules: `BENCHMARK_HARNESS`, `SHARED_SKILL`, `LOCAL_RUNTIME/TOOL`, `MODEL/CHAT_RUNTIME`, or `PROJECT`; only `SHARED_SKILL` defects belong in this Skill;
+- a harness correction is a separate setup Decision and must be completed before the next measured replay;
+- a Shared Skill change is a separate Engineering Decision and must self-host through this Phase Lock before it can be used as the new baseline;
+- compare the new replay against the immediately previous valid replay of the same case on correctness, process metrics, user wall, attributable wall, and failure families;
+- do not promote a rule because one noisy run was faster. Prefer causally clear invariants or repeated comparable evidence;
+- if a change reduces one tax but introduces new process/harness failures, do not call the iteration a throughput win merely because the final code passes;
+- once a clean replay passes result/process correctness and the remaining wall is either within target or explicitly accepted by the user, freeze that protocol baseline. After freeze, stop self-modifying until new evidence demonstrates a regression, a new safety/correctness invariant, or the user explicitly starts a new iteration cycle.
+
+The purpose of iteration is to remove the highest-weight avoidable tax, not to keep the Skill permanently in motion.
+
+## POST-DONE｜Throughput Learning Loop — HARD RULE
+
+Every real Local Engineering Decision that reaches DONE runs one lightweight loop:
+
+```text
+OBSERVE → REFLECT → EVOLVE
+```
+
+**OBSERVE** — record enough evidence to explain throughput: `USER_PERCEIVED_WALL`, `phaseTimingsMs`, Local compute, observable Tool/transport wall, attributable Chat orchestration tax, avoidable calls/round trips, recovery/harness mistakes, `RESULT_CORRECTNESS`, `PROCESS_CORRECTNESS`, and throughput-gate result.
+
+**REFLECT** — identify reusable causes, especially redundant acquisition, context amplification, unnecessary polling, shell/runner startup tax, fragmented transfer/apply/verify, runner-ready-to-payload gaps, and avoidable recovery.
+
+### Per-turn throughput ledger — HARD RULE
+
+Every user turn that loads this Skill and performs Local engineering MUST leave one compact record when control returns to the user, including `DONE`, `FAIL_CLOSED`, `BLOCKED`, or other terminal/hand-off outcomes.
+
+Raw records live at:
+
+`/Users/agent/Desktop/proton-workspace/skills/chat-local-engineering-protocol/.throughput/ledger.jsonl`
+
+Use append-only JSONL. A normal `DECISION` record should contain only compact execution evidence: timestamp/id, scenario/outcome, `USER_PERCEIVED_WALL` when known, `phaseTimingsMs`, avoidable calls, `LSR_AFTER_SNAPSHOT`, `LMR`, VERIFY starts, result/process correctness, throughput gate, failure-family tags, and one short note. Never put source code, credentials, secrets, or large logs into the ledger.
+
+`phaseTimingsMs` has exactly these canonical keys when present:
+
+```text
+bootstrap, caseSetup, acquire, semantic, bundle, apply, verify, recovery, postDone
+```
+
+Values are observed milliseconds or `null`. Keep `phaseTimingStatus` as `COMPLETE` only when every materially relevant phase is directly observed; otherwise use `PARTIAL`. Do not estimate missing phase values merely to make the sum resemble the UI wall. Batch review may derive unattributed wall from the resolved UI wall and known timings.
+
+Timing telemetry must not perturb the measured task: do not add timing-only source reads, searches, process starts, polling, or Local calls. Prefer timings already returned by Tool/process telemetry; otherwise record `null`.
+
+The Chat UI wall is often visible only after the assistant finishes. In that case record `userWallSec: null` with `wallStatus: "PENDING_UI"`. If the user later provides the actual UI wall, append one `WALL_UPDATE` event referencing the prior record; do not rewrite historical events merely to fill that field.
+
+The ledger is **telemetry/evidence, not protocol/source mutation**. A single small append to this dedicated ledger is therefore exempt from Whole-file Bundle Replacement and Self-hosting regression, and MUST NOT recursively create another Engineering Decision. This exception applies only to append-only throughput telemetry at the path above.
+
+Raw per-turn records are not copied into `SKILL.md` or `validation-evidence.md`. They accumulate for batch analysis. Default evolution window: after **8 completed records with resolved wall time** since the last `BATCH_REVIEW`, or whenever the user explicitly requests review, run one aggregate review of wall-time distribution, repeated failure families, avoidable transaction patterns, phase-timing distribution, unattributed wall, and correctness/process trends. Distill only reusable evidence into references; change canonical rules only when the existing evidence-promotion standard is met. Append a compact `BATCH_REVIEW` marker after the review.
+
+A demonstrated safety/correctness invariant may still justify an immediate separate Skill Decision instead of waiting for the batch window.
+
+**EVOLVE** — every task should learn; not every task should modify the Skill.
+- one-off or weakly attributed observations stay as evidence;
+- repeated or causally clear evidence may become a preference/default;
+- demonstrated safety/correctness invariants may justify a HARD RULE;
+- any Shared Skill rule/reference/machine-readable change is a new independent Engineering Decision and must self-host through the full Phase Lock;
+- prefer replacing/simplifying obsolete rules over accumulating parallel rules;
+- keep representative examples/benchmarks/failures in references, not the canonical rule body.
+
+The learning loop must remain cheaper than the waste it is meant to remove.
 
 ## Self-hosting regression — HARD RULE
 
-Changes to this Skill are themselves a real Engineering Decision and MUST obey this Skill. There is no special maintenance bypass.
+A Skill change is itself a real Engineering Decision. It passes only when both are true:
+- **result correctness** — changed files and necessary machine-readable mirrors are internally consistent and verification passes;
+- **process correctness** — the route obeyed Phase Lock, scenario/tool rules, whole-file mutation, WIP preservation, and recovery/verification constraints.
 
-A Skill update passes only when both are true:
-- **result correctness:** the complete changed files and machine-readable mirror are internally consistent and verification passes;
-- **process correctness:** the execution route obeyed the selected Scenario, Phase Lock, batch/native primitive rules, whole-file mutation model, WIP preservation, and verification/recovery constraints.
+Use current Skill files as the primary regression source. Do not hide avoidable calls, harness/transport failures, recovery tax, or user-visible waiting behind an eventual PASS. Preserve pre-existing index/staging state unless explicitly authorized otherwise.
 
-For Skill maintenance specifically:
-- use current Skill files as the real source under test; do not substitute synthetic fixtures for the primary regression;
-- record avoidable tool calls as failures even when the final files are correct;
-- do not hide probe/read/edit/retry waste behind a later successful batch operation;
-- preserve any pre-existing Git index/staging state unless the user explicitly authorizes changing it;
-- self-hosting regression is judged by end-to-end user wall plus hard metrics, not Local filesystem speed alone.
-
-`SELF_HOSTING_RESULT_CORRECT = required`
-`SELF_HOSTING_PROCESS_CORRECT = required`
+The dedicated `.throughput/ledger.jsonl` append-only telemetry exception above is intentionally excluded from this self-hosting rule to avoid recursive self-modification.
 
 ## Core principle
 
-**Do not optimize for fewer tools in the abstract. Optimize for the fewest safe, authoritative evidence transactions needed to finish the Engineering Decision correctly.**
+**Use the fewest safe, authoritative evidence transactions needed to finish one Engineering Decision correctly.**
 
-References: `references/dual-environment.md`, `references/tools-and-context.md`, `references/tests-and-long-tasks.md`, `references/metrics-and-antipatterns.md`, `references/validation-evidence.md`, `references/execution-policy.yaml`, `references/project-instructions-v3.md`.
+References: `references/tools-and-context.md`, `references/dual-environment.md`, `references/tests-and-long-tasks.md`, `references/metrics-and-antipatterns.md`, `references/validation-evidence.md`, `references/execution-policy.yaml`, `references/project-instructions-v3.md`.

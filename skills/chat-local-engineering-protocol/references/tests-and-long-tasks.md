@@ -1,40 +1,36 @@
-# 测试与长任务协议
+# 测试与长任务
 
-唯一规则 owner 是 `../SKILL.md`。
+`../SKILL.md` 是唯一规则 owner。本文件只解释 VERIFY / long-running process 的执行意图。
 
-## Verification pyramid
+## Verification shape
 
-所有 test/build/typecheck/lint/benchmark 必须在用户本机真实执行。
+正常 Decision：一次 batched targeted VERIFY。
 
-正常 Decision：`ONE batched targeted VERIFY`。
-失败后：Failure First，优先返回 failing proof/path/stack/stderr；冻结源码足够时直接在 Chat 修复，再只重跑失败 proof。
-Full Suite 只在 Stage Gate 使用，不进入 debugging loop。
+失败后：Failure First；冻结源码足够时直接修复，只重跑受影响 proof。Full Suite 留给 Stage Gate，不进入 debugging loop。
 
 ## Start once
 
 ```text
-START ONCE
+start once
 → keep PID/session/log authority
-→ decision-value sampling only
+→ sample only when result can change a decision
 → terminal result
 ```
 
-不要为了知道“还在运行”而高频 polling。
+不要为了知道“还在运行”而 polling。
 
-## Timeout / UNKNOWN recovery order
+## Timeout / UNKNOWN
 
 ```text
-same PID/session continuation
-→ if session unavailable, recover authority from PID/log/status
-→ only after proven failure may a retry be considered
+same PID/session
+→ if unavailable, recover runtime authority
+→ retry only after proven failure
 ```
 
 Timeout 不是失败证明。非幂等 mutation/publish/deploy/start 的 UNKNOWN 禁止 blind retry。
 
-## Result density
+## Output density
 
-PASS 默认返回 concise terminal summary。失败返回最小但足够的 proof 和环境分类，不把完整 PASS 日志重新灌入 Chat。
+PASS 返回 concise terminal summary；FAIL 返回最小但充分的 failing proof/path/stack/stderr。不要把完整成功日志重新灌入 Chat。
 
-## Runtime mismatch
-
-Runtime evidence 与 source evidence 分域。Declared/shared facts 与真实 PID/port/browser 不一致时，先查 Runtime authority；不要回到源码反复 grep 猜原因。
+Runtime mismatch 优先查拥有该事实的 CLI/PID/log/browser authority，不要回源码猜运行态。

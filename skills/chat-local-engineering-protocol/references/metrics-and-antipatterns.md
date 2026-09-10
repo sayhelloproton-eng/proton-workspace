@@ -1,53 +1,45 @@
 # 指标与反模式
 
-唯一规则 owner 是 `../SKILL.md`。
+`../SKILL.md` 是唯一规则 owner。本文件只把重复失败压缩成少量 failure families，避免维护几十条近义反例。
 
-## Primary KPI
+## 观测维度
 
-`USER_PERCEIVED_WALL = user request → completed result`。
-内部拆分：Chat reasoning/context ingest + Tool/control-plane wall + Local compute + recovery tax。
-不能用“Local 只花了几百毫秒”替代用户实际等待时间。
+主指标是 `USER_PERCEIVED_WALL`。拆分时区分：Chat reasoning/context/orchestration、Tool/transport、Local compute、recovery/retry、harness/setup/transport mistake。
 
-## Hard metrics
+过程正确性至少关注：`LSR_AFTER_SNAPSHOT`、`LMR_PER_DECISION`、`VERIFY_START`、preflight probe、blind retry、polling、mutation fragmentation，以及 benchmark harness 是否污染业务墙钟。
 
-- `LSR_AFTER_SNAPSHOT = 0`，除非 named evidence trigger 重开 ACQUIRE。
-- `LMR_PER_DECISION = 1` target。
-- normal `VERIFY_START = 1`。
-- `KNOWN_SCOPE_PREFLIGHT_PROBES = 0`：已知多文件 scope 的第一源码读取必须直接 batch-first。
-- per-file mutation loop = 0。
-- blind retry = 0。
-- native primitive 可回答时，shell-wrapped ordinary read/search = 0。
-- debugging loop 中 Full Suite = 0。
+## Failure families
 
-## Normal wall budgets
+### 1. Acquisition / context amplification
 
-- known scope / ordinary: 1–3 min
-- known scope / large source: 2–4 min
-- unknown cross-module: 3–5 min
-- frozen repair: +1–2 min
-- complex architecture: 5–10 min
+典型失败：FROZEN 后无证据重读；已知 scope 先 probe 再 batch；把 candidate package/full repo 全量灌入；acceptance 太窄导致返工；Repomix 未显式递归排除 dependency/generated/cache tree。
 
-Routine work >10 min 默认视为 throughput failure，直到能用真实 reasoning/runtime 证明不可避免。
+### 2. Remote-IDE mutation
 
-## Anti-patterns
+典型失败：patch/unified diff、逐文件/逐 hunk edit、anchor hunting、Local transformer 决定源码变化、一个 Engineering Decision 多次 mutation、把 file count 当 mutation unit。
 
-1. FROZEN 后 `read → think → grep → read`。
-2. 把 MCP 当 remote IDE。
-3. 已知多个文件先逐个 `read_file(..., length=1)` / line-count probe，再调用 batch read。
-4. 普通 read/search 通过 `start_process + cat/git show/grep` 完成。
-5. 一看到 candidate 就把整个 package/full repo 灌进 Chat。
-6. Acceptance evidence 太窄，导致同一 Decision 漏验收维度。
-7. 完整源码过量导致 over-design。
-8. model-authored patch/unified diff 作为默认 mutation transport。
-9. Local Python/sed/string transformer 决定源码变化。
-10. 一个 Engineering Decision 做多次 Local mutation。
-11. VERIFY FAIL 后无证据重新 ACQUIRE。
-12. repair loop 反复 Full Suite。
-13. timeout/UNKNOWN 后 blind retry。
-14. 独立 drift-check call + 独立 apply call，而 gate 可以安全内嵌 APPLY。
-15. 把 file count 当 mutation unit。
-16. 用 Local mechanical time 冒充用户总吞吐成绩。
+### 3. Transport / harness expansion
 
-## Evidence-driven fallback
+典型失败：把 source/base64/tar/heredoc 塞进 shell；每轮重写 apply harness；shell quoting/平台命令/临时依赖假设造成无业务价值失败；Data Plane staging 因缺目录/错误 overwrite mode 产生额外往返。
 
-Batch-first 并不要求无视截断：如果 native batch 结果明确报告 `remaining lines` / truncation，才有证据切换 S2 → Repomix exact。禁止为了预判截断而购买逐文件 probe RTT。
+### 4. Verification / recovery waste
+
+典型失败：debugging loop 反复 Full Suite；只为确认“还在运行”而高频 polling；timeout/UNKNOWN 后 blind retry；终态未知时先删 transport/evidence；本可 same-session continuation 却新开 process。
+
+### 5. Authority / mirror drift
+
+典型失败：用源码猜 Runtime；正文升级但 machine-readable mirror/runner/reference 仍表达旧模型；reference 逐渐复制出第二套规范。
+
+### 6. Throughput accounting distortion
+
+典型失败：用 Local mechanical time 冒充用户总墙钟；把 harness/recovery 错误从成绩中扣掉；最终 PASS 掩盖前面的无效 tool calls。
+
+### 7. Benchmark harness scope expansion
+
+历史回放若只需要临时 case 与必要源码/验收证据，却为每个 case 重建整仓、重新物化 `node_modules`/安装依赖并删除完整 sandbox，会把环境 setup/teardown 错误注入单个 Engineering Decision。
+
+优先做法：只抽取当前 Decision 所需文件/证据到临时 case。若独立全仓环境确实是测试前提，则把一次性 setup/teardown 单独归因，不伪装成业务吞吐。
+
+## 使用原则
+
+新增失败优先归入既有 family；只有出现新的因果类型时才增加类别。案例细节放 `validation-evidence.md`，不要把每次事故永久扩展成一条新反模式。

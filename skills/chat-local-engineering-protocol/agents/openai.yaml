@@ -1,4 +1,4 @@
 interface:
   display_name: "Chat 本机工程协议"
-  short_description: "一次源码包 → Chat 产出完整新文件 → tar 整文件覆盖 → 本机真实验证"
-  default_prompt: "Use $chat-local-engineering-protocol. Acquire the relevant source once, freeze Local reads, produce complete new versions of every changed file in Chat, package them as changed-files.tar, batch CREATE/REPLACE/DELETE whole files on Local in one mutation round trip, then run real Local verification. Do not use model-authored patches, line edits, anchors, or Local source transformers in the normal path."
+  short_description: "读取本机 Skill → 最小充分证据 → 整文件 bundle → 一次 Apply/Verify → 复盘迭代"
+  default_prompt: "Use the current Local $chat-local-engineering-protocol as the sole shared protocol. Follow ACQUIRE → FROZEN → BUNDLE_READY → APPLIED → VERIFY → DONE; choose tools by fact ownership, keep context minimum-sufficient, use whole-file bundle mutation with one guarded Local apply, verify on the real Local machine, preserve WIP, then run the lightweight POST-DONE learning loop. This protocol is Chat-only and must not be imposed on Codex-native sessions."

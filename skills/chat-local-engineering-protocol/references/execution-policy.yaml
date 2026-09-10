@@ -1,72 +1,200 @@
-version: chat-local-engineering.v3-scenario-aware
+version: chat-local-engineering.v3
 canonical_skill: /Users/agent/Desktop/proton-workspace/skills/chat-local-engineering-protocol/SKILL.md
 single_rule_owner: true
 applies_to: chatgpt_chat_local_engineering_only
 codex_excluded: true
+
+authority:
+  load_current_local_skill_via_local_dev_first: true
+  project_instruction_role: bootstrap_only
+  current_local_skill_wins_conflicts: true
+  repository_rules_may_only_be_stricter: true
+  references_define_second_protocol: false
+
 phase_lock:
   states: [ACQUIRE, FROZEN, BUNDLE_READY, APPLIED, VERIFY, DONE]
-  acquire_is_phase_not_single_tool_call: true
+  mutation_unit: engineering_decision
   local_source_reads_after_frozen: 0
-  reacquire_only_on:
+  local_mutation_round_trips_target: 1
+  normal_verify_starts_target: 1
+  bundle_ready_requires: [COMPLETE_NEXT_VERSION_FILES, SEMANTIC_OPERATIONS, EXPECTED_STATE, VERIFICATION_PLAN, SELF_REVIEW, TOKEN_INDEPENDENT_ENVELOPE_BODY]
+  bundle_ready_allows_only_runner_token_substitution_after_start: true
+  frozen_runner_start_requires_bundle_ready: true
+  reopen_only_on:
     - SOURCE_DRIFT
     - VERIFICATION_FAILURE_REQUIRING_NEW_SOURCE
     - RUNTIME_REALITY_MISMATCH
     - EVIDENCE_TRIGGERED_SCOPE_EXPANSION
+
 acquire:
   strategy: acceptance_first_implementation_minimal
-  order: [FULL_ACCEPTANCE_EVIDENCE, DISCOVER, MINIMAL_IMPLEMENTATION_CONTEXT, DECISION, ACTUAL_CHANGED_FILES_FULL_SOURCE, FROZEN]
-  known_scope_batch_first: true
+  known_scope_multi_file_first_read: read_multiple_files
   known_scope_preflight_probes: 0
-  batch_truncation_reclassifies_to_large_scope: true
-scenario_router:
-  KNOWN_SCOPE_SMALL: [LOCAL_AUTHORITY, ONE_LOCAL_NATIVE_BATCH_SOURCE, FROZEN]
-  KNOWN_SCOPE_LARGE: [LOCAL_AUTHORITY, REPOMIX_EXACT_SNAPSHOT, FROZEN]
-  UNKNOWN_SCOPE: [CODEGRAPH_STRUCTURE, LOCAL_NATIVE_SEARCH_AND_WIP, MINIMAL_SEAMS, CHANGED_FILES_FULL_SOURCE, FROZEN]
-  VERIFY_FAILURE: [FAILURE_FIRST, FROZEN_CONTEXT_REPAIR, TARGETED_REVERIFY]
-  TIMEOUT_UNKNOWN: [SAME_SESSION_CONTINUATION, AUTHORITY_RECOVERY_IF_NEEDED, NO_BLIND_RETRY]
-  RUNTIME_BROWSER: [ROUTE_BY_FACT_OWNER]
-  SOURCE_DRIFT: [EMBEDDED_APPLY_FINGERPRINT_GATE, FAIL_CLOSED]
+  large_complete_snapshot: repomix_exact
+  unknown_scope_structure: codegraph
+  unknown_scope_current_filesystem: local_native_search
+  changed_replace_files_require_complete_source: true
+  unknown_scope_default_discovery_rounds_per_fact_domain: 1
+  additional_discovery_requires_named_evidence_gap: true
+  adjacent_evidence_should_be_batched: true
+
+benchmark_replay:
+  case_selection_before_measured_decision: true
+  broad_history_browsing_inside_measured_decision: forbidden_unless_acceptance_requires
+  repository_clone_inside_measured_decision: forbidden_unless_acceptance_requires
+  dependency_rematerialization_inside_measured_decision: forbidden_unless_acceptance_requires
+  unrelated_teardown_inside_measured_decision: forbidden
+  required_setup_teardown_attributed_separately: true
+  setup_inside_same_user_turn_still_counts_in_user_wall: true
+  hidden_oracle_may_hide_implementation_not_requirements: true
+  hidden_oracle_required_public_contract_must_be_in_acceptance: true
+  hidden_oracle_new_requirement_invalidates_sample: HARNESS_HIDDEN_REQUIREMENT
+  lifecycle: [PREPARE_CASE, FREEZE_FIXTURE, CLEAN_REPLAY, CAPTURE_UI_WALL, ATTRIBUTE, SCORE, DECIDE_NEXT_ACTION]
+  fixture_frozen_before_measured_replay: true
+  same_representative_case_per_optimization_hypothesis: true
+  modify_fixture_inside_measured_replay: forbidden
+  modify_shared_skill_inside_measured_replay: forbidden
+  scoring_axes: [RESULT_CORRECTNESS, PROCESS_CORRECTNESS, THROUGHPUT]
+  throughput_pending_until_real_ui_wall: true
+  local_timing_cannot_declare_user_wall_pass: true
+  wall_update_after_ui_value: required_when_initially_pending
+  unattributed_wall_may_be_derived_after_wall_resolution: true
+  unattributed_wall_internal_composition_must_not_be_guessed: true
+  user_accepted_unattributed_wall_stops_investigation_until_regression_or_blocker: true
+
 primitive_policy:
   ordinary_read_search: native_api_first
-  known_scope_preflight_probe: forbidden
-  structure: codegraph
-  large_complete_snapshot: repomix_exact
-  compressed_snapshot: discovery_only
-  process: [GIT_AUTHORITY, APPLY, TEST, BUILD, TYPECHECK, LINT, BENCHMARK, RUNTIME]
-  browser: playwright_ax
+  process_reserved_for: [GIT_AUTHORITY, APPLY, VERIFY, RUNTIME]
+  noninteractive_mechanical_shell_preference: /bin/sh
+  global_default_shell_mutation: forbidden
+  browser_fact_owner: playwright_ax
+
+repomix:
+  include_patterns_preferred_when_scope_known: true
+  explicit_recursive_ignore_required: true
+  minimum_ignores:
+    - "**/node_modules/**"
+    - "**/.git/**"
+    - "**/.next/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/coverage/**"
+  rely_only_on_gitignore_or_builtin_exclusions: forbidden
+
 mutation:
-  unit: engineering_decision
-  complete_file_versions_only: true
-  default_transport: whole_file_bundle
+  transport: whole_file_bundle
   operations: [CREATE, REPLACE, DELETE]
   rename_model: CREATE_PLUS_DELETE
-  local_mutation_round_trips_target: 1
-  embedded_drift_gate: required
+  payload_command_separation: required
+  stable_runner: scripts/apply-whole-file-bundle.mjs
+  streaming_text_receiver: scripts/materialize-whole-file-envelope.mjs
+  streaming_text_receiver_preferred_when_suitable: true
+  streaming_payload_transactions_target: 1
+  streaming_operation_header: "FILE <token> <CREATE|REPLACE> <path>"
+  streaming_delete_header: "DELETE <token> <path>"
+  manifest_owner: local_receiver
+  model_authored_manifest_on_default_path: forbidden
+  frozen_decision_runner: scripts/execute-frozen-decision.mjs
+  frozen_decision_runner_preferred_when_verification_plan_known: true
+  frozen_decision_terminal_marker: "chat-local-result>"
+  frozen_decision_model_reentry_between_mechanical_steps: forbidden
+  frozen_runner_start_requires_bundle_ready: true
+  ready_marker_next_local_tool_transaction: interact_with_process_payload
+  ready_to_payload_intervening_tool_calls_target: 0
+  ready_to_payload_forbidden_actions: [SOURCE_READ, SEARCH, SCHEMA_DISCOVERY, PLAN_CHANGE, VERIFY_REDESIGN, RUNNER_INTERFACE_READ, MODEL_POLLING]
+  shell_embedded_payload: forbidden
   local_source_design: forbidden
+  drift_gate_inside_apply: required
+  cleanup_after_terminal_authority_only: true
+
 verification:
   environment: user_local_machine
   start_once: true
+  frozen_control_plane_runs_batched_targeted_verify: true
   failure_first: true
   selective_reverification: true
   full_suite: stage_gate_only
+  high_frequency_status_polling: forbidden
+
 recovery:
   timeout_unknown_order: [SAME_PID_OR_SESSION, AUTHORITY_RECOVERY, RETRY_ONLY_AFTER_PROVEN_FAILURE]
+  deterministic_terminal_marker_preferred: "chat-local-result>"
+  blind_retry: forbidden
+
 metrics:
   primary: USER_PERCEIVED_WALL
-  local_source_reads_after_frozen: 0
-  local_mutation_round_trips_target: 1
-  normal_verify_starts_target: 1
-  known_scope_preflight_probes: 0
-  blind_retries: 0
-  shell_wrapped_native_read_search: 0
+  components: [CHAT_ORCHESTRATION, TOOL_TRANSPORT, LOCAL_COMPUTE, RECOVERY_RETRY_TAX, HARNESS_SETUP_TRANSPORT_MISTAKES]
+  phase_timing_keys: [bootstrap, caseSetup, acquire, semantic, bundle, apply, verify, recovery, postDone]
+  phase_timing_unit: milliseconds
+  phase_timing_missing_value: null
+  phase_timing_values_must_be_observed_not_estimated: true
+  timing_only_tool_calls: forbidden
+  frozen_control_plane_model_reentries_target: 0
+  model_authored_manifest_target: 0
+  ready_to_payload_intervening_tool_calls_target: 0
+  runner_ready_to_payload_gap_ms_record_when_observed: true
+  unattributed_wall_ms_may_be_derived_after_ui_wall_resolution: true
+  unattributed_wall_must_not_be_semantically_guessed: true
+  post_done_review_per_real_decision: 1
+  throughput_ledger_record_per_local_engineering_turn: 1
+
+throughput_ledger:
+  path: /Users/agent/Desktop/proton-workspace/skills/chat-local-engineering-protocol/.throughput/ledger.jsonl
+  format: append_only_jsonl
+  record_every_local_engineering_user_turn: true
+  terminal_outcomes: [DONE, FAIL_CLOSED, BLOCKED, HANDOFF]
+  pending_ui_wall_allowed: true
+  late_ui_wall_update_event: WALL_UPDATE
+  raw_source_or_secret_content: forbidden
+  telemetry_append_is_protocol_mutation: false
+  whole_file_bundle_required_for_telemetry_append: false
+  self_hosting_required_for_telemetry_append: false
+  phase_timings_field: phaseTimingsMs
+  phase_timing_status_field: phaseTimingStatus
+  phase_timing_status_values: [PARTIAL, COMPLETE]
+  phase_timing_keys: [bootstrap, caseSetup, acquire, semantic, bundle, apply, verify, recovery, postDone]
+  benchmark_case_setup_visible_in_user_wall: true
+  missing_phase_timing_must_remain_null: true
+  batch_review_after_resolved_records: 8
+  batch_review_on_user_request: true
+  batch_review_marker: BATCH_REVIEW
+  raw_records_copied_into_canonical_skill: false
+  batch_review_analyzes_phase_timing_distribution: true
+  batch_review_may_derive_unattributed_wall: true
+
+post_done_learning:
+  sequence: [OBSERVE, REFLECT, EVOLVE]
+  after_done_not_new_verification_phase: true
+  business_source_reread_for_retrospective_only: forbidden
+  skill_update_is_separate_engineering_decision: true
+  evidence_promotion:
+    one_off_or_weak: EVIDENCE_ONLY
+    repeated_or_causally_clear: PREFERENCE_OR_DEFAULT
+    safety_or_correctness_invariant: HARD_RULE_ALLOWED
+  prefer_rule_replacement_over_accumulation: true
+
+skill_evolution:
+  iteration_sequence: [EVIDENCE, HYPOTHESIS, ONE_SKILL_DECISION, SELF_HOST, SAME_CASE_REPLAY, COMPARE, KEEP_OR_REVERT_OR_FREEZE]
+  one_causal_hypothesis_per_iteration: true
+  classify_owner_before_rule_change: [BENCHMARK_HARNESS, SHARED_SKILL, LOCAL_RUNTIME_TOOL, MODEL_CHAT_RUNTIME, PROJECT]
+  only_shared_skill_owner_changes_this_skill: true
+  harness_fix_is_separate_setup_decision: true
+  shared_skill_change_requires_self_hosting: true
+  compare_against_immediately_previous_valid_same_case_replay: true
+  compare_dimensions: [RESULT_CORRECTNESS, PROCESS_CORRECTNESS, USER_PERCEIVED_WALL, ATTRIBUTABLE_WALL, FAILURE_FAMILIES]
+  noisy_single_run_speedup_not_sufficient_for_rule_promotion: true
+  process_regression_blocks_throughput_win_claim: true
+  freeze_when_clean_replay_correct_and_remaining_wall_target_or_user_accepted: true
+  after_freeze_self_modification_requires: [REGRESSION_EVIDENCE, NEW_SAFETY_CORRECTNESS_INVARIANT, EXPLICIT_USER_NEW_ITERATION]
+
 self_hosting:
   required_for_skill_changes: true
-  synthetic_fixture_as_primary_regression: forbidden
   result_correctness: required
   process_correctness: required
-  avoidable_tool_calls_are_failures: true
   preserve_preexisting_index_state: required
-  primary_performance_metric: USER_PERCEIVED_WALL
+  avoidable_harness_transport_recovery_tax_counts: true
+  throughput_ledger_append_exception: true
+
 git:
   preserve_existing_wip: required
   stage_or_commit_without_explicit_user_request: forbidden
