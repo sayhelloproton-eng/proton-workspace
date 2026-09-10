@@ -1,0 +1,72 @@
+version: chat-local-engineering.v3-scenario-aware
+canonical_skill: /Users/agent/Desktop/proton-workspace/skills/chat-local-engineering-protocol/SKILL.md
+single_rule_owner: true
+applies_to: chatgpt_chat_local_engineering_only
+codex_excluded: true
+phase_lock:
+  states: [ACQUIRE, FROZEN, BUNDLE_READY, APPLIED, VERIFY, DONE]
+  acquire_is_phase_not_single_tool_call: true
+  local_source_reads_after_frozen: 0
+  reacquire_only_on:
+    - SOURCE_DRIFT
+    - VERIFICATION_FAILURE_REQUIRING_NEW_SOURCE
+    - RUNTIME_REALITY_MISMATCH
+    - EVIDENCE_TRIGGERED_SCOPE_EXPANSION
+acquire:
+  strategy: acceptance_first_implementation_minimal
+  order: [FULL_ACCEPTANCE_EVIDENCE, DISCOVER, MINIMAL_IMPLEMENTATION_CONTEXT, DECISION, ACTUAL_CHANGED_FILES_FULL_SOURCE, FROZEN]
+  known_scope_batch_first: true
+  known_scope_preflight_probes: 0
+  batch_truncation_reclassifies_to_large_scope: true
+scenario_router:
+  KNOWN_SCOPE_SMALL: [LOCAL_AUTHORITY, ONE_LOCAL_NATIVE_BATCH_SOURCE, FROZEN]
+  KNOWN_SCOPE_LARGE: [LOCAL_AUTHORITY, REPOMIX_EXACT_SNAPSHOT, FROZEN]
+  UNKNOWN_SCOPE: [CODEGRAPH_STRUCTURE, LOCAL_NATIVE_SEARCH_AND_WIP, MINIMAL_SEAMS, CHANGED_FILES_FULL_SOURCE, FROZEN]
+  VERIFY_FAILURE: [FAILURE_FIRST, FROZEN_CONTEXT_REPAIR, TARGETED_REVERIFY]
+  TIMEOUT_UNKNOWN: [SAME_SESSION_CONTINUATION, AUTHORITY_RECOVERY_IF_NEEDED, NO_BLIND_RETRY]
+  RUNTIME_BROWSER: [ROUTE_BY_FACT_OWNER]
+  SOURCE_DRIFT: [EMBEDDED_APPLY_FINGERPRINT_GATE, FAIL_CLOSED]
+primitive_policy:
+  ordinary_read_search: native_api_first
+  known_scope_preflight_probe: forbidden
+  structure: codegraph
+  large_complete_snapshot: repomix_exact
+  compressed_snapshot: discovery_only
+  process: [GIT_AUTHORITY, APPLY, TEST, BUILD, TYPECHECK, LINT, BENCHMARK, RUNTIME]
+  browser: playwright_ax
+mutation:
+  unit: engineering_decision
+  complete_file_versions_only: true
+  default_transport: whole_file_bundle
+  operations: [CREATE, REPLACE, DELETE]
+  rename_model: CREATE_PLUS_DELETE
+  local_mutation_round_trips_target: 1
+  embedded_drift_gate: required
+  local_source_design: forbidden
+verification:
+  environment: user_local_machine
+  start_once: true
+  failure_first: true
+  selective_reverification: true
+  full_suite: stage_gate_only
+recovery:
+  timeout_unknown_order: [SAME_PID_OR_SESSION, AUTHORITY_RECOVERY, RETRY_ONLY_AFTER_PROVEN_FAILURE]
+metrics:
+  primary: USER_PERCEIVED_WALL
+  local_source_reads_after_frozen: 0
+  local_mutation_round_trips_target: 1
+  normal_verify_starts_target: 1
+  known_scope_preflight_probes: 0
+  blind_retries: 0
+  shell_wrapped_native_read_search: 0
+self_hosting:
+  required_for_skill_changes: true
+  synthetic_fixture_as_primary_regression: forbidden
+  result_correctness: required
+  process_correctness: required
+  avoidable_tool_calls_are_failures: true
+  preserve_preexisting_index_state: required
+  primary_performance_metric: USER_PERCEIVED_WALL
+git:
+  preserve_existing_wip: required
+  stage_or_commit_without_explicit_user_request: forbidden

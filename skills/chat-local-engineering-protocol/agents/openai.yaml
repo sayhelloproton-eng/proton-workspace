@@ -1,0 +1,4 @@
+interface:
+  display_name: "Chat 本机工程协议"
+  short_description: "一次源码包 → Chat 产出完整新文件 → tar 整文件覆盖 → 本机真实验证"
+  default_prompt: "Use $chat-local-engineering-protocol. Acquire the relevant source once, freeze Local reads, produce complete new versions of every changed file in Chat, package them as changed-files.tar, batch CREATE/REPLACE/DELETE whole files on Local in one mutation round trip, then run real Local verification. Do not use model-authored patches, line edits, anchors, or Local source transformers in the normal path."
