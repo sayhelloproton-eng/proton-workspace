@@ -11,23 +11,40 @@ authority:
   repository_rules_may_only_be_stricter: true
   references_define_second_protocol: false
 
+priority_model:
+  order: [CURRENT_REALITY_EYES, FACT_OWNER_FIRST_DIVERGENCE, STAGE_COMPLETENESS, AUTOMATION_THROUGHPUT, STAGE_VERIFY, ACCEPTANCE_RELEASE]
+  reality_and_correctness_outrank_throughput: true
+  automation_below_model_judgment: true
+  visible_or_runtime_problem_requires_current_authority_before_source_speculation: true
+
+stage_discipline:
+  sequence: [IMPLEMENTATION_STAGE, STAGE_FREEZE, STAGE_VERIFY, ACCEPTANCE_WHEN_REQUIRED, RELEASE_PUBLISH_WHEN_AUTHORIZED]
+  normal_target_one_engineering_decision_per_stage: true
+  formal_testing_during_incomplete_implementation: forbidden
+  allowed_implementation_checks: [EXPECTED_STATE, DRIFT_GATE, WHOLE_FILE_APPLY_INTEGRITY, SYNTAX_PARSE_SANITY, PATH_SCHEMA_EXISTENCE, GIT_DIFF_CHECK]
+  formal_stage_checks: [UNIT, INTEGRATION, TYPECHECK, LINT_CORRECTNESS_GATE, BUILD, E2E, ACCEPTANCE, FULL_REGRESSION]
+  formal_test_starts_before_stage_freeze_target: 0
+  failure_route: [CAPTURE_FAILURE_SET, CLOSE_VERIFY_ATTEMPT, OPEN_REPAIR_STAGE, COMPLETE_REPAIR_SCOPE, STAGE_FREEZE, VERIFY_AGAIN]
+  interleaved_test_patch_loop: forbidden
+  full_suite: stage_gate_only
+  acceptance: stage_gate_only_except_read_only_preimplementation_eyes
+  publish_or_deploy_as_debug_transport: forbidden
+
 phase_lock:
   states: [ACQUIRE, FROZEN, BUNDLE_READY, APPLIED, VERIFY, DONE]
   mutation_unit: engineering_decision
   local_source_reads_after_frozen: 0
   local_mutation_round_trips_target: 1
   normal_verify_starts_target: 1
+  implementation_decision_verify_scope_before_stage_freeze: MECHANICAL_INTEGRITY_ONLY
   bundle_ready_requires: [COMPLETE_NEXT_VERSION_FILES, SEMANTIC_OPERATIONS, EXPECTED_STATE, VERIFICATION_PLAN, SELF_REVIEW, TOKEN_INDEPENDENT_ENVELOPE_BODY]
   bundle_ready_allows_only_runner_token_substitution_after_start: true
   frozen_runner_start_requires_bundle_ready: true
-  reopen_only_on:
-    - SOURCE_DRIFT
-    - VERIFICATION_FAILURE_REQUIRING_NEW_SOURCE
-    - RUNTIME_REALITY_MISMATCH
-    - EVIDENCE_TRIGGERED_SCOPE_EXPANSION
+  reopen_only_on: [SOURCE_DRIFT, VERIFICATION_FAILURE_REQUIRING_NEW_SOURCE, RUNTIME_REALITY_MISMATCH, EVIDENCE_TRIGGERED_SCOPE_EXPANSION]
 
 acquire:
-  strategy: acceptance_first_implementation_minimal
+  strategy: reality_acceptance_contract_owner_then_minimum_implementation
+  eyes_first_for_visible_runtime_defects: true
   known_scope_multi_file_first_read: read_multiple_files
   known_scope_preflight_probes: 0
   large_complete_snapshot: repomix_exact
@@ -67,18 +84,12 @@ primitive_policy:
   process_reserved_for: [GIT_AUTHORITY, APPLY, VERIFY, RUNTIME]
   noninteractive_mechanical_shell_preference: /bin/sh
   global_default_shell_mutation: forbidden
-  browser_fact_owner: playwright_ax
+  browser_fact_owner: acceptance_eyes_playwright_ax
 
 repomix:
   include_patterns_preferred_when_scope_known: true
   explicit_recursive_ignore_required: true
-  minimum_ignores:
-    - "**/node_modules/**"
-    - "**/.git/**"
-    - "**/.next/**"
-    - "**/dist/**"
-    - "**/build/**"
-    - "**/coverage/**"
+  minimum_ignores: ["**/node_modules/**", "**/.git/**", "**/.next/**", "**/dist/**", "**/build/**", "**/coverage/**"]
   rely_only_on_gitignore_or_builtin_exclusions: forbidden
 
 mutation:
@@ -109,26 +120,31 @@ mutation:
 
 verification:
   environment: user_local_machine
-  start_once: true
-  frozen_control_plane_runs_batched_targeted_verify: true
+  start_once_per_stage_attempt: true
+  formal_verification_requires_stage_freeze: true
+  implementation_time_checks_mechanical_only: true
   failure_first: true
+  capture_failure_set_before_repair: true
   selective_reverification: true
+  interleaved_patch_test_loop: forbidden
   full_suite: stage_gate_only
   high_frequency_status_polling: forbidden
 
 long_running_processes:
+  universal_sequence: [START_ONCE, RECORD_DURABLE_AUTHORITY, CONTINUE_INDEPENDENT_WORK, CHECK_AT_DEPENDENCY_POINT]
   known_slow_examples: [PACKAGE_BUILD, PUBLISHABILITY, RELEASE_PUBLISH, DEPLOY, INSTALL, FULL_SUITE]
   terminal_not_required_same_turn:
     start_once: true
     detached_or_durable_process_preferred: true
     record: [PID_OR_SESSION, LOG_PATH_WHEN_AVAILABLE, TERMINAL_AUTHORITY]
-    return_control_after_start: true
+    continue_independent_work_after_start: required
+    if_no_independent_work: RETURN_CONTROL
     same_turn_status_polling_after_start: forbidden
     same_turn_status_polling_target: 0
     timeout_with_confirmed_pid_is_failure: false
     replacement_process_on_timeout: forbidden
   later_status_check_order: [TERMINAL_AUTHORITY, PID_OR_SESSION_ONCE, LOG_ONCE_IF_DEAD]
-  alive_without_terminal_authority: RUNNING_AND_STOP
+  alive_without_terminal_authority: RUNNING_CONTINUE_OR_RETURN
   non_idempotent_retry_requires: PROVEN_NOT_APPLIED_OR_FAILED
   npm_publish_terminal_authority: EXACT_REGISTRY_VERSION
   npm_publish_release:
@@ -138,7 +154,7 @@ long_running_processes:
     continue_independent_work_after_start: required
     same_turn_process_output_wait: forbidden
     same_turn_pid_polling: forbidden
-    same_turn_registry_polling_while_independent_work_exists: forbidden
+    same_turn_registry_polling: forbidden
     if_no_independent_work: RETURN_CONTROL
     later_decision_authority_first: "npm view <package>@<version> version"
     registry_exact_present: APPLIED_PASS
@@ -153,8 +169,16 @@ long_running_processes:
     sample_only_when_decision_value: true
   repeated_polling_violation_severity: HIGH
 
+release_delivery:
+  after_stage_verify: required
+  after_required_acceptance: required
+  explicit_user_delivery_intent: required
+  publish_to_debug_implementation: forbidden
+  release_bound_commit_authorization_from_explicit_release_request: true
+  push_authorization_is_separate: true
+
 recovery:
-  timeout_unknown_order: [SAME_PID_OR_SESSION, AUTHORITY_RECOVERY, RETRY_ONLY_AFTER_PROVEN_FAILURE]
+  timeout_unknown_order: [DURABLE_OR_OWNER_AUTHORITY, SAME_PID_OR_SESSION_WHEN_NEEDED, RETRY_ONLY_AFTER_PROVEN_FAILURE]
   deterministic_terminal_marker_preferred: "chat-local-result>"
   blind_retry: forbidden
 
@@ -166,6 +190,7 @@ metrics:
   phase_timing_missing_value: null
   phase_timing_values_must_be_observed_not_estimated: true
   timing_only_tool_calls: forbidden
+  formal_test_starts_before_stage_freeze_target: 0
   known_slow_detached_same_turn_polls_target: 0
   frozen_control_plane_model_reentries_target: 0
   model_authored_manifest_target: 0
