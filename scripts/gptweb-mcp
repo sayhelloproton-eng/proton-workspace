@@ -1,0 +1,3 @@
+#!/bin/zsh
+set -eu
+exec /bin/zsh /Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/gptweb-mcp "$@"

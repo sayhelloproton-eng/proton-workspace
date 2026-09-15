@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feishu Knowledge Publish"
+  short_description: "把本地知识库按同路径覆盖发布到飞书；图片先上传再写正文"
+  default_prompt: "Use $feishu-knowledge-publish to project local docs/知识库 to the matching Feishu Wiki paths with the current lark-cli. Treat local content as authoritative, do not diff old remote bodies, and pre-upload every local image before overwriting an image-bearing document."

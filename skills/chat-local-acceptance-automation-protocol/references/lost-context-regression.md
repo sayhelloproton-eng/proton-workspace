@@ -96,13 +96,17 @@ Expected: keep `SEE` read-only. If state-changing interaction is actually requir
 Scenario: a legacy project document says to restart Chrome or rerun a journey after Browser timeout, while the shared Skill requires authority recovery and SAME_SCENE.
 Expected: use this Skill as the sole automation truth and ignore/migrate the conflicting project automation rule. The project's Formal Spec/current product facts still decide product semantics; they do not override the shared automation protocol.
 
+## R24 — shared MCP owner already exists before product discovery
+Scenario: canonical `gptweb-mcp`/runtime authority reports `local-dev` or `playwright-chrome` already managed and READY, while the product acceptance path proposes `npx`/`npm exec` of the same Desktop Commander or Playwright Extension MCP to perform discovery.
+Expected: `CONNECT + IDENTIFY + VERIFY`; prove the existing owner first and keep `sideEffectState=NOT_APPLIED` for the proposed duplicate spawn. Reuse only a manager-owned supported connection surface. Do not start a second raw stdio server/controller, do not attach another client to an existing child's stdin/stdout, and do not restart/steal the existing owner. If the product implementation hard-codes duplicate ownership, stop at FIRST_DIVERGENCE and route to engineering as `PRODUCT_DEFECT` when it violates the intended ownership contract, or `SPEC_EXTERNAL_MISMATCH` when the formal contract itself demands an incompatible ownership model.
+
 ## Pass criteria
 
-PASS means direct selection of the Skill-owned capability/mode/failure class/path with no unnecessary history, alternate transport invention, blind retry, discarded checkpoint, duplicate resource, stale-evidence attribution, hidden observation mutation, second automation truth, or evidence beyond the contract.
+PASS means direct selection of the Skill-owned capability/mode/failure class/path with no unnecessary history, alternate transport invention, blind retry, discarded checkpoint, duplicate resource/runtime owner, stale-evidence attribution, hidden observation mutation, second automation truth, or evidence beyond the contract.
 
 Failure to use current visible reality when it decides the next step is `DID_NOT_USE_EYES_FIRST`. Screenshot/Vision on ordinary Web when semantic DOM already proves the fact is `EXCESS_PROOF`.
 
-## Behavioral smoke set — B1-B8
+## Behavioral smoke set — B1-B9
 
 - `B1 = R1` — EYES-FIRST + minimum proof.
 - `B2 = R5` — relay error → CONNECT / TOOL_RUNTIME_FAILURE.
@@ -112,5 +116,6 @@ Failure to use current visible reality when it decides the next step is `DID_NOT
 - `B6 = R18` — same-transaction Browser-mediated authentication.
 - `B7 = R21` — side-effect reconciliation before retry.
 - `B8 = R23` — shared Skill wins over conflicting project automation instructions.
+- `B9 = R24` — shared MCP owner first; no duplicate raw stdio server/controller.
 
-Use the harness contract in `validation-baseline.md`. The R-series is the full static contract corpus. B1-B8 is representative model-behavior smoke; normal Skill edits run only the affected B cases unless a full release-quality behavioral smoke is explicitly needed.
+Use the harness contract in `validation-baseline.md`. The R-series is the full static contract corpus. B1-B9 is representative model-behavior smoke; normal Skill edits run only the affected B cases unless a full release-quality behavioral smoke is explicitly needed.

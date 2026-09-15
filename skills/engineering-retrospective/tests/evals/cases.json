@@ -1,0 +1,42 @@
+[
+  {
+    "id": "RETRO-01",
+    "scenario": "修正文档中的一个拼写错误，没有调试、假设变化或新边界",
+    "expected": "skip"
+  },
+  {
+    "id": "RETRO-02",
+    "scenario": "第三次因为同一浏览器控制权误判重复建立连接，用户再次纠正；真实截图证明已有可复用连接",
+    "expected": "capture"
+  },
+  {
+    "id": "RETRO-03",
+    "scenario": "一次外部 API 502，尚不知道是否是网络、服务端还是客户端原因",
+    "expected": "needs_evidence"
+  },
+  {
+    "id": "RETRO-04",
+    "scenario": "状态已经持久化，但进程重启后后续调度丢失；重启回归证明提交与调度是两个独立 side effect",
+    "expected": "capture"
+  },
+  {
+    "id": "RETRO-05",
+    "scenario": "现有明确规范要求先检查真实状态，本次严格按规范执行并正常通过",
+    "expected": "skip"
+  },
+  {
+    "id": "RETRO-06",
+    "scenario": "工具超时后无法确认 side effect 是否已发生，后续查询真实 owner 才发现操作已经成功",
+    "expected": "capture"
+  },
+  {
+    "id": "RETRO-07",
+    "scenario": "一次测试失败最终发现是测试断言本身写反，修正后无新的工程机制",
+    "expected": "skip"
+  },
+  {
+    "id": "RETRO-08",
+    "scenario": "新 CLI 已原生支持过去自研 wrapper 的能力，真实验证显示旧 wrapper 只增加维护成本",
+    "expected": "capture"
+  }
+]

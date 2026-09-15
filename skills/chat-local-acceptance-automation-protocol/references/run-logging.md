@@ -1,6 +1,6 @@
 # Acceptance Run Logging
 
-Every acceptance automation run reaching a terminal or hand-off outcome appends one compact JSONL event. The ledger improves this Skill in batches; it is not a reason to rewrite protocol text after every run.
+Every real acceptance automation run has a visible beginning and a visible terminal/handoff record. The ledger improves this Skill in batches; it is not a reason to rewrite protocol text after every run.
 
 Default local-only ledger:
 
@@ -10,13 +10,89 @@ Default local-only ledger:
 
 `.runs/` is intentionally Git-ignored. Raw run evidence must never become a committed Skill artifact.
 
-Use `python3 scripts/append-run-log.py --input <result.json>`. The writer locks concurrent appends, validates capability/routing/behavioral fields, validates uncertain side-effect state, rejects secret-like keys **and embedded secret-like values**, and rejects oversized records.
+Use `python3 scripts/append-run-log.py --input -` by default and stream the compact JSON record over stdin. The writer locks concurrent appends, validates capability/routing/behavioral fields, validates uncertain side-effect state, rejects secret-like keys **and embedded secret-like values**, rejects oversized records, and enforces the run-start/terminal pairing contract.
+
+## Artifact placement and lifecycle — HARD RULE
+
+`/Users/agent/Desktop/proton-workspace` is a shared workspace root, **not a temporary-file directory**. Acceptance automation must never place run JSON, screenshots, logs, status files, diagnostic scripts, or other runtime artifacts directly in that root. Do not hide violations with `.gitignore`; prevent the wrong path.
+
+Use these owners:
+
+```text
+Authoritative run telemetry:
+  <skill-root>/.runs/ledger.jsonl
+
+Retained local-only visual/evidence artifacts that are intentionally kept:
+  <skill-root>/.runs/artifacts/<runId>/...
+
+Ephemeral acceptance input/intermediate files when stdin is not practical:
+  <skill-root>/.runs/tmp/<runId>/...
+```
+
+The normal logging path is stdin, so no input file is created at all. If a file input is genuinely required, `append-run-log.py` accepts it only from the controlled acceptance temp root above. After a successful ledger append, the writer deletes that input file and removes now-empty per-run parent directories. If cleanup reports `AUTOMATION_INPUT_CLEANUP=FAIL`, the ledger append is already authoritative: do **not** replay the product action or append the same run event again; remove/reconcile only the residue before returning control.
+
+A screenshot, DOM capture, or other binary/large artifact is not embedded in the ledger. Retain it only when the acceptance contract needs later human/audit inspection, and then place it under `.runs/artifacts/<runId>/`. Otherwise delete it at terminal closure. Large runtime logs remain with their runtime owner or controlled temp path and are referenced only by compact metadata when necessary.
+
+At terminal closure:
+
+```text
+ledger record written
+→ intended retained artifacts already under .runs/artifacts/<runId>/
+→ ephemeral inputs/intermediates removed
+→ no acceptance runtime artifact in workspace root
+```
+
+## Fast run boundary
+
+Normal real run:
+
+```text
+AUTOMATION_START
+→ bind fresh evidence window once
+→ execute the known path
+→ read only decision-relevant fresh evidence
+→ AUTOMATION_RUN
+```
+
+`AUTOMATION_START` is intentionally cheap. It exists because terminal-only logging can make an entire failed or interrupted run invisible. Its `recordedAt` is the minimum fresh-evidence time boundary. When the run needs `WAIT`, `LISTEN`, `CONNECT`, or `RECOVER`, set `freshEvidenceWindowBound=true` and bind the stable PID/session/log cursor or equivalent owner evidence when available before the first relevant action.
+
+Do not replace this with a broad post-hoc grep. If a service/runtime is not listening, first-divergence evidence is the missing runtime/listener; no log tailer can manufacture heartbeat/events from a process that never ran.
+
+The same `runId` must be used by exactly one start and one terminal `AUTOMATION_RUN`. A terminal event without a prior start fails closed unless it is an explicit historical repair using `retrospectiveReconciliation=true`, a non-empty `evidenceProvenance`, and capability miss `TERMINAL_RUN_LOG_MISSED`.
+
+## Handoff and interruption closure
+
+A user-requested handoff, chat switch, explicit stop, or other return of control does not suspend the run-boundary contract. Before returning control, if this Chat opened an `AUTOMATION_START`, it must append the matching terminal `AUTOMATION_RUN` with the truthful current outcome, failure class, and side-effect state. Use the existing outcome field to describe the handoff/interruption; do not invent a second event type or leave an open start for the next Chat to infer.
+
+If the terminal record was already missed in an earlier Chat, the next Chat must use the documented retrospective-reconciliation path. It must not silently backfill the run as though the terminal event had been written on time. This keeps handoff state mechanical and prevents lost-context recovery from becoming a second source of automation truth.
+
+## Mechanical open-run guard
+
+Use the read-only checker to make run closure mechanical rather than memory-based:
+
+```text
+python3 scripts/check-open-runs.py --run-id <runId> --fail-on-open
+```
+
+Run it after appending the terminal record and before returning control. Exit `0` proves that the selected run has no unmatched `AUTOMATION_START`; exit `1` means it is still open and this Chat must either append the truthful terminal record or explicitly report why logging cannot be completed. The checker never mutates the ledger and never fabricates an outcome.
+
+For hygiene/audit only, `python3 scripts/check-open-runs.py --project <project>` lists all open historical runs in that project. Historical opens are not automatically owned by the current Chat and must not be silently closed; use retrospective reconciliation only when current authoritative evidence can support it.
 
 ## Event types
 
-`AUTOMATION_RUN` is the default. `WALL_UPDATE` may later attach user-visible wall time to an existing run. `BATCH_REVIEW` records a compact aggregate review marker.
+`AUTOMATION_START` opens a run boundary. `AUTOMATION_RUN` closes it with a terminal or hand-off outcome. `WALL_UPDATE` may later attach user-visible wall time to an existing run. `BATCH_REVIEW` records a compact aggregate review marker.
 
-A useful run record may contain:
+A useful start record may contain:
+
+```text
+runId, project, scenario
+acceptanceMode
+neededCapabilities
+knownPathHit
+freshEvidenceWindowBound
+```
+
+A useful terminal run record may contain:
 
 ```text
 runId, project, scenario, outcome
@@ -94,6 +170,22 @@ Use short reusable codes, not essays. Current common codes:
 - `OBSERVATION_MUTATED_STATE`
 - `SIDE_EFFECT_NOT_RECONCILED`
 - `SECOND_AUTOMATION_TRUTH_USED`
+- `FRESH_EVIDENCE_WINDOW_NOT_BOUND`
+- `TERMINAL_RUN_LOG_MISSED`
+- `POST_HOC_LOG_RECONSTRUCTION`
+
+## Retrospective repair
+
+Retrospective reconciliation exists only to repair a previously missed terminal record from current authoritative evidence. It must not be used as a convenience path for new runs.
+
+Required terminal fields when `retrospectiveReconciliation=true`:
+
+```text
+evidenceProvenance    # short description of the authority used
+capabilityMisses      # must include TERMINAL_RUN_LOG_MISSED
+```
+
+If historical evidence cannot distinguish `APPLIED | NOT_APPLIED | UNKNOWN`, preserve `UNKNOWN`. Do not backdate `recordedAt`; the ledger must show when the reconstruction was actually written.
 
 ## Privacy and size
 
@@ -126,6 +218,6 @@ Invalid harness samples may document testing infrastructure failures, but they m
 
 Do not edit the Skill after every run. Default review window: after **8 completed comparable runs with resolved wall time**, or when the user explicitly asks for review.
 
-Batch review compares acceptance-mode selection, failure classification, side-effect reconciliation, needed vs used capabilities, known-path hit rate, eyes/minimum-proof behavior, repeated misses, avoidable calls/switches/polls, checkpoint reuse/advancement, first-divergence quality, fresh-evidence-window discipline, harness overhead, result/process correctness, and user wall time.
+Batch review compares acceptance-mode selection, failure classification, side-effect reconciliation, needed vs used capabilities, known-path hit rate, eyes/minimum-proof behavior, repeated misses, avoidable calls/switches/polls, checkpoint reuse/advancement, first-divergence quality, fresh-evidence-window discipline, start/terminal pairing, harness overhead, result/process correctness, and user wall time.
 
 A `BATCH_REVIEW` analyzes evidence; it does not authorize a rewrite. Use [skill-evolution.md](skill-evolution.md) for promotion/placement and MAINLINE-FIRST discipline.

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "TEXT_EXISTING",
+    "situation": "同路径文档存在且远端正文不同，本地文章无图片",
+    "expected": "reuse_node_then_overwrite_without_fetching_old_body"
+  },
+  {
+    "id": "TEXT_MISSING_NODE",
+    "situation": "本地新增文章，父路径唯一，远端节点不存在",
+    "expected": "create_node_then_overwrite"
+  },
+  {
+    "id": "IMAGE_OK",
+    "situation": "文章引用两张存在的 assets/知识库 图片",
+    "expected": "preupload_all_images_then_render_tokens_then_overwrite"
+  },
+  {
+    "id": "IMAGE_MISSING",
+    "situation": "文章引用的本地图片不存在",
+    "expected": "fail_closed_before_body_overwrite"
+  },
+  {
+    "id": "AMBIGUOUS_NODE",
+    "situation": "同一父节点下出现无法唯一判定的同名目标",
+    "expected": "fail_closed_without_creating_duplicate"
+  },
+  {
+    "id": "REMOTE_BODY_EDITED",
+    "situation": "远端正文有人改过但该文档仍定义为本地投影",
+    "expected": "local_body_wins_no_merge"
+  },
+  {
+    "id": "UNKNOWN_CREATE",
+    "situation": "node-create 超时，无法判断是否已创建",
+    "expected": "reconcile_remote_node_before_any_retry"
+  },
+  {
+    "id": "COLLAB_SOURCE",
+    "situation": "目标远端文章已成为多人协作真源",
+    "expected": "stop_and_reassign_ownership_not_merge"
+  }
+]

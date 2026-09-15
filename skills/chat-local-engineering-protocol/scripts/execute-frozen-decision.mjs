@@ -1,38 +1,67 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const argv = process.argv.slice(2);
+const usage = "usage: execute-frozen-decision.mjs";
+if (argv.length > 0) {
+  if (argv.length === 1 && (argv[0] === "--help" || argv[0] === "-h")) {
+    console.log(usage);
+    process.exit(0);
+  }
+  console.error(usage);
+  process.exit(64);
+}
+
 const startedAt = new Date().toISOString();
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const skillRoot = path.resolve(scriptDir, "..");
 const receiverPath = path.join(scriptDir, "materialize-whole-file-envelope.mjs");
 const applyPath = path.join(scriptDir, "apply-whole-file-bundle.mjs");
 const staging = fs.mkdtempSync(path.join(os.tmpdir(), "chat-local-frozen-"));
 const receiptPath = path.join(staging, "decision-receipt.json");
+const authorityId = `${Date.now()}-${process.pid}-${randomUUID()}`;
+const durableDir = path.join(skillRoot, ".runtime", "frozen-decisions", authorityId);
+fs.mkdirSync(durableDir, { recursive: true });
+const durableReceiptPath = path.join(durableDir, "decision-receipt.json");
 const maxTailBytes = 8_192;
+
+console.log(`DURABLE_RECEIPT=${durableReceiptPath}`);
 
 const tail = (value) => {
   const text = typeof value === "string" ? value : "";
   return text.length <= maxTailBytes ? text : text.slice(-maxTailBytes);
 };
 
-const writeReceipt = (payload) => {
-  fs.writeFileSync(
-    receiptPath,
-    `${JSON.stringify(
-      {
-        contract: "chat-local-frozen-decision-receipt.v1",
-        startedAt,
-        finishedAt: new Date().toISOString(),
-        staging,
-        ...payload,
-      },
-      null,
-      2,
-    )}\n`,
-  );
+const atomicWrite = (target, text) => {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const temporary = `${target}.tmp-${process.pid}`;
+  fs.writeFileSync(temporary, text);
+  fs.renameSync(temporary, target);
+};
+
+const writeReceipt = (payload, { terminal = false } = {}) => {
+  const updatedAt = new Date().toISOString();
+  const text = `${JSON.stringify(
+    {
+      contract: "chat-local-frozen-decision-receipt.v1",
+      authorityId,
+      startedAt,
+      updatedAt,
+      ...(terminal ? { finishedAt: updatedAt } : {}),
+      staging,
+      durableReceiptPath,
+      ...payload,
+    },
+    null,
+    2,
+  )}\n`;
+  atomicWrite(receiptPath, text);
+  atomicWrite(durableReceiptPath, text);
 };
 
 const finishExit = (code) => {
@@ -41,7 +70,7 @@ const finishExit = (code) => {
 };
 
 const failBeforeApply = (message, extra = {}) => {
-  writeReceipt({ status: "FAIL_CLOSED", message, ...extra });
+  writeReceipt({ status: "FAIL_CLOSED", message, ...extra }, { terminal: true });
   console.error(`FROZEN_DECISION=FAIL_CLOSED ${message}`);
   console.error(`EVIDENCE_DIR=${staging}`);
   finishExit(65);
@@ -179,8 +208,21 @@ try {
   );
 }
 
+const verificationLabels = commands.map((command) => command.label);
+writeReceipt({
+  status: "READY_TO_APPLY",
+  repoRoot: repo,
+  verificationPlan: verificationLabels,
+});
+
 console.log("DATA_PLANE_PAYLOAD_TRANSACTIONS=1");
 const applyReceiptPath = path.join(staging, "apply-receipt.json");
+writeReceipt({
+  status: "APPLYING",
+  repoRoot: repo,
+  verificationPlan: verificationLabels,
+  applyReceiptPath,
+});
 const apply = runSync(process.execPath, [
   applyPath,
   repo,
@@ -195,6 +237,8 @@ if (apply.status !== 0) {
   const status = apply.status === 70 ? "UNKNOWN_AFTER_MUTATION" : "APPLY_FAILED";
   writeReceipt({
     status,
+    repoRoot: repo,
+    verificationPlan: verificationLabels,
     apply: {
       exitCode: apply.status,
       signal: apply.signal,
@@ -203,17 +247,37 @@ if (apply.status !== 0) {
       stdoutTail: tail(apply.stdout),
       stderrTail: tail(apply.stderr),
     },
-  });
+  }, { terminal: true });
   console.error(`FROZEN_DECISION=${status}`);
   console.error(`EVIDENCE_DIR=${staging}`);
   finishExit(apply.status ?? 70);
 }
 
+const applySummary = { exitCode: apply.status, durationMs: apply.durationMs };
 console.log(`APPLY_MS=${apply.durationMs}`);
 console.log("VERIFY_START=1");
 const verificationResults = [];
 let verifyDurationMs = 0;
+writeReceipt({
+  status: "APPLIED_VERIFYING",
+  repoRoot: repo,
+  verificationPlan: verificationLabels,
+  apply: applySummary,
+  verifyDurationMs,
+  verificationResults,
+  currentVerification: null,
+});
+
 for (const command of commands) {
+  writeReceipt({
+    status: "VERIFYING",
+    repoRoot: repo,
+    verificationPlan: verificationLabels,
+    apply: applySummary,
+    verifyDurationMs,
+    verificationResults,
+    currentVerification: command.label,
+  });
   const result = runSync(command.command, command.args, {
     cwd: command.cwd,
     env: command.env,
@@ -240,22 +304,37 @@ for (const command of commands) {
     if (result.stderr) process.stderr.write(tail(result.stderr));
     writeReceipt({
       status: "VERIFY_FAILED",
-      apply: { exitCode: apply.status, durationMs: apply.durationMs },
+      repoRoot: repo,
+      verificationPlan: verificationLabels,
+      apply: applySummary,
       verifyDurationMs,
       verificationResults,
-    });
+      currentVerification: command.label,
+    }, { terminal: true });
     console.error("FROZEN_DECISION=VERIFY_FAILED");
     console.error(`EVIDENCE_DIR=${staging}`);
     finishExit(1);
   }
+  writeReceipt({
+    status: "VERIFYING",
+    repoRoot: repo,
+    verificationPlan: verificationLabels,
+    apply: applySummary,
+    verifyDurationMs,
+    verificationResults,
+    currentVerification: null,
+  });
 }
 
 writeReceipt({
   status: "PASS",
-  apply: { exitCode: apply.status, durationMs: apply.durationMs },
+  repoRoot: repo,
+  verificationPlan: verificationLabels,
+  apply: applySummary,
   verifyDurationMs,
   verificationResults,
-});
+  currentVerification: null,
+}, { terminal: true });
 console.log(`VERIFY_MS=${verifyDurationMs}`);
 console.log("FROZEN_DECISION=PASS");
 if (process.env.CHAT_LOCAL_KEEP_STAGING === "1") {

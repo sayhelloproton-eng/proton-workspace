@@ -1,0 +1,4 @@
+interface:
+  display_name: "Chinese Technical Writing Naturalizer"
+  short_description: "让中文技术表达更自然、更具体，同时守住事实、证据与技术边界"
+  default_prompt: "Use $chinese-technical-writing-naturalizer to improve this existing Chinese technical writing. Preserve facts, evidence, terminology, uncertainty and technical boundaries; remove formulaic or translated prose without inventing a human persona or new facts."

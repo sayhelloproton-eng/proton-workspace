@@ -25,6 +25,14 @@ current Local SKILL.md
 
 Repository rules may add stricter constraints but may not weaken this protocol. Project instructions should only bootstrap/enforce loading this Skill. Never modify Codex configuration, Codex skills, hooks, shell environment, or AGENTS.md merely to enforce this Chat-only protocol.
 
+## Codex execution boundary — HARD RULE
+
+ChatGPT Chat must not directly invoke, start, resume, steer, or send work to Codex CLI, Codex app-server, Codex binaries, or equivalent autonomous Codex execution merely because the user says “交给 Codex”, “让 Codex 审计”, “生成提示词给 Codex”, or similar delegation language. Those phrases default to **produce a prompt / handoff for the user to run in Codex**, not hidden Codex execution by Chat.
+
+Direct Codex execution is allowed only when the **current user message explicitly authorizes that specific direct Codex execution**. Authorization is single-use and non-inheritable: a prior-turn approval, project history, handoff, or earlier permission does not authorize a later Codex invocation. If the user explicitly asks Chat to take over an **existing already-running Codex session**, that authorization applies only to observing/recovering/continuing the named existing session as requested; it does not authorize starting another Codex process or silently creating a replacement session.
+
+When the user expects a visible Codex conversation, do not substitute an invisible/background CLI session. If direct execution is not currently authorized, generate the exact audit/work prompt and stop at the handoff boundary.
+
 ## Phase lock — HARD RULE
 
 ```text
@@ -35,7 +43,7 @@ Core invariants:
 - one **Engineering Decision** is the mutation unit; file count is not;
 - Chat owns semantic design and complete next-version files;
 - Local performs only mechanical whole-file CREATE/REPLACE/DELETE plus real verification;
-- preserve unrelated WIP; never stage, clean, overwrite unrelated work, or commit without explicit authorization;
+- preserve unrelated WIP; never stage, clean, overwrite unrelated work, or commit without authorization. An explicit user instruction to publish/release the current or named release authorizes only the release-bound version/release commit(s) mechanically required by the repository's formal release workflow; do not ask for a second commit confirmation. This does not authorize unrelated commits or push;
 - after FROZEN, `LSR_AFTER_SNAPSHOT = 0` unless named evidence reopens ACQUIRE;
 - `BUNDLE_READY` means all complete next-version files, semantic operations, expected state, verification plan, self-review, and the token-independent envelope body are final; only deterministic substitution of the runner-issued token may remain;
 - the frozen runner MUST NOT start before `BUNDLE_READY`;
@@ -121,6 +129,46 @@ A hidden oracle may hide the historical implementation and expected output detai
 
 For short non-interactive mechanical commands that do not require zsh-specific syntax/profile state, prefer an explicit lightweight shell such as `/bin/sh` when supported. Do not change the user's global default shell for this protocol. Shell-path stalls are runtime/recovery evidence, not a reason to reopen source acquisition.
 
+### Known-slow long-running process detachment — HARD RULE
+
+When direct evidence or repeated Local history shows a command commonly exceeds normal Chat tool wait — for example package build, publishability, release/publish, deploy, install, or a full test suite — first decide whether its terminal result is required before the current user turn can make the next decision.
+
+If the terminal result is **not required in the current turn**:
+- start the long operation exactly once using a process/session that can outlive the initiating tool wait; prefer detached/background execution when supported;
+- record durable authority: `PID_OR_SESSION`, `LOG_PATH` when available, and the expected `TERMINAL_AUTHORITY` / target identity;
+- once start is mechanically confirmed, return control to the user. Same-turn status polling after detached start is forbidden: do not repeatedly call `read_process_output`, `ps`, health/status endpoints, registry queries, or fixed-interval waits merely to learn “still running”;
+- a short Tool timeout around a known-slow task is not a failure/recovery trigger when PID/session authority proves the operation started; never start a replacement copy merely because the initiating Tool wait expired;
+- protocol bookkeeping that does not inspect the long-running process, such as the required throughput-ledger append, may still complete before returning control.
+
+When a later user turn or a downstream Engineering Decision actually requires the outcome, check in this order:
+1. read the terminal Owner authority first;
+2. if the terminal condition is already satisfied, classify PASS/APPLIED without inspecting the process;
+3. otherwise inspect the recorded PID/session **once**;
+4. if it is alive, classify `RUNNING`, report that fact, and stop;
+5. if it is dead, read its terminal log/output once, classify the failure/outcome, and retry a non-idempotent action only after `NOT_APPLIED` / `FAILED` is mechanically proven.
+
+For npm package publish/release, the exact Registry version (`npm view <package>@<version> version`) is the side-effect authority; build/publish process output is secondary evidence.
+
+#### npm publish / release non-blocking — HARD RULE
+
+For npm package publish/release specifically, **synchronous terminal waiting is forbidden**, even when the final Registry result would otherwise be needed in the same user turn.
+
+- start the publish/release exactly once in a detached or otherwise durable process;
+- record `PID_OR_SESSION`, `LOG_PATH` when available, and the exact `<package>@<version>` Registry target;
+- immediately continue any independent work that does not depend on Registry publication; do not hold the Chat open waiting for publish completion;
+- same-turn `read_process_output`, PID polling, fixed-interval waiting, or repeated Registry polling merely to watch publication progress is forbidden;
+- when a later downstream decision actually needs publication state, query exact Registry authority first with `npm view <package>@<version> version` (or an equivalent exact Registry read);
+- if the exact Registry version exists, classify `APPLIED/PASS` regardless of the original publish process output;
+- if the exact Registry version is absent, inspect the recorded PID/session once; if alive, classify `RUNNING` and continue other independent work or return control; if dead, read the terminal log/output once and classify;
+- retry publish only after `NOT_APPLIED` / `FAILED` is mechanically proven;
+- if no independent work remains, return control to the user rather than synchronously waiting for npm publish/release to finish.
+
+This package-specific rule overrides the generic terminal-required same-turn allowance below. A model waiting synchronously for npm publish/release terminal completion is a **HIGH-SEVERITY throughput violation**.
+
+If the terminal result **is required in the current turn**, same-session waiting is allowed for non-publish long-running work, but sample only when new evidence can change a decision. Fixed-interval polling remains forbidden.
+
+Repeated same-turn polling of known-slow work is a **HIGH-SEVERITY throughput regression** because it blocks user control without adding decision value.
+
 ### Repomix context hygiene — HARD RULE
 
 When Repomix is selected:
@@ -153,6 +201,19 @@ Verification: verification-plan.json
 ```
 
 Rename is normally `CREATE new + DELETE old`. Even one changed file uses the same model.
+
+### Expected-state derivation — DEFAULT
+
+Once the complete changed-path set is known and before `BUNDLE_READY`, derive the current authority mechanically instead of hand-authoring file-state metadata:
+
+```text
+node skills/chat-local-engineering-protocol/scripts/build-expected-state.mjs \
+  --repo <repoRoot> \
+  --path <changed-path-1> \
+  --path <changed-path-2>
+```
+
+Chat owns the repository root and the semantic changed-path set; Local derives current `HEAD`, branch, path existence, and `sha256` for existing files. Do not hand-author `exists` / `sha256` on the normal path when this helper is available. The resulting `chat-local-expected-state.v1` JSON is frozen into the envelope, and the apply runner still rechecks it immediately before mutation to fail closed on concurrent drift.
 
 ### Data Plane / Control Plane — HARD RULE
 
@@ -217,7 +278,8 @@ All real test/build/typecheck/lint/benchmark work runs on the user's Local machi
 - if frozen context is sufficient, repair without source reread;
 - rerun only affected proofs after repair;
 - Full Suite is a Stage Gate, not a debugging loop;
-- sample long tasks only when the result has decision value; do not poll merely to learn “still running”.
+- sample long tasks only when the result has decision value; do not poll merely to learn “still running”;
+- known-slow work whose terminal result is not needed in the current turn follows the detachment HARD RULE above.
 
 ## Performance gates
 
@@ -235,6 +297,7 @@ Hard process metrics:
 - `LMR_PER_DECISION = 1` target
 - normal `VERIFY_START = 1`
 - `KNOWN_SCOPE_PREFLIGHT_PROBES = 0`
+- `KNOWN_SLOW_DETACHED_SAME_TURN_POLLS = 0`
 - per-file mutation loops = 0
 - blind retries = 0
 - shell-embedded mutation payload = 0
@@ -312,9 +375,11 @@ Raw records live at:
 
 `/Users/agent/Desktop/proton-workspace/skills/chat-local-engineering-protocol/.throughput/ledger.jsonl`
 
-Use append-only JSONL. A normal `DECISION` record should contain only compact execution evidence: timestamp/id, scenario/outcome, `USER_PERCEIVED_WALL` when known, `phaseTimingsMs`, avoidable calls, `LSR_AFTER_SNAPSHOT`, `LMR`, VERIFY starts, result/process correctness, throughput gate, failure-family tags, and one short note. Never put source code, credentials, secrets, or large logs into the ledger.
+Use `python3 scripts/append-throughput-log.py --input <record.json>` for every new `DECISION`, `WALL_UPDATE`, or `BATCH_REVIEW` event. The writer validates the canonical field names/types, exact phase timing keys, wall-time state, duplicate Decision IDs, WALL_UPDATE targets, record size, and secret-like fields/values before it appends under a file lock. Direct ad-hoc writes of new throughput events are forbidden; historical schema drift remains historical evidence and is not rewritten merely to normalize it.
 
-`phaseTimingsMs` has exactly these canonical keys when present:
+A normal `DECISION` record should contain only compact execution evidence: recorded time/id, scenario/outcome, `USER_PERCEIVED_WALL` when known, `phaseTimingsMs`, avoidable calls, `LSR_AFTER_SNAPSHOT`, `LMR`, verify starts, result/process correctness, throughput gate, failure-family tags, and one short note. Never put source code, credentials, secrets, or large logs into the ledger.
+
+`phaseTimingsMs` has exactly these canonical keys:
 
 ```text
 bootstrap, caseSetup, acquire, semantic, bundle, apply, verify, recovery, postDone
@@ -324,11 +389,11 @@ Values are observed milliseconds or `null`. Keep `phaseTimingStatus` as `COMPLET
 
 Timing telemetry must not perturb the measured task: do not add timing-only source reads, searches, process starts, polling, or Local calls. Prefer timings already returned by Tool/process telemetry; otherwise record `null`.
 
-The Chat UI wall is often visible only after the assistant finishes. In that case record `userWallSec: null` with `wallStatus: "PENDING_UI"`. If the user later provides the actual UI wall, append one `WALL_UPDATE` event referencing the prior record; do not rewrite historical events merely to fill that field.
+The Chat UI wall is often visible only after the assistant finishes. In that case record `userWallSec: null` with `wallStatus: "PENDING_UI"`. If the user later provides the actual UI wall, append one validated `WALL_UPDATE` referencing the prior Decision ID; do not rewrite historical events merely to fill that field.
 
-The ledger is **telemetry/evidence, not protocol/source mutation**. A single small append to this dedicated ledger is therefore exempt from Whole-file Bundle Replacement and Self-hosting regression, and MUST NOT recursively create another Engineering Decision. This exception applies only to append-only throughput telemetry at the path above.
+The ledger is **telemetry/evidence, not protocol/source mutation**. A single validated append through the dedicated writer is therefore exempt from Whole-file Bundle Replacement and Self-hosting regression, and MUST NOT recursively create another Engineering Decision. This exception applies only to append-only throughput telemetry at the path above.
 
-Raw per-turn records are not copied into `SKILL.md` or `validation-evidence.md`. They accumulate for batch analysis. Default evolution window: after **8 completed records with resolved wall time** since the last `BATCH_REVIEW`, or whenever the user explicitly requests review, run one aggregate review of wall-time distribution, repeated failure families, avoidable transaction patterns, phase-timing distribution, unattributed wall, and correctness/process trends. Distill only reusable evidence into references; change canonical rules only when the existing evidence-promotion standard is met. Append a compact `BATCH_REVIEW` marker after the review.
+Raw per-turn records are not copied into `SKILL.md` or `validation-evidence.md`. They accumulate for batch analysis. Default evolution window: after **8 completed records with resolved wall time** since the last `BATCH_REVIEW`, or whenever the user explicitly requests review, run one aggregate review of wall-time distribution, repeated failure families, avoidable transaction patterns, phase-timing distribution, unattributed wall, and correctness/process trends. Distill only reusable evidence into references; change canonical rules only when the existing evidence-promotion standard is met. Append a compact validated `BATCH_REVIEW` marker after the review.
 
 A demonstrated safety/correctness invariant may still justify an immediate separate Skill Decision instead of waiting for the batch window.
 

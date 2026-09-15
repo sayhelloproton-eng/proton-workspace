@@ -30,11 +30,32 @@ A timeout is a bounded-observation result, not evidence that a larger timeout is
 
 Useful non-visual evidence includes stdout/stderr, process output, logs, Console/Network, and event streams. Record only the slice needed for the current decision; do not dump secret-bearing state trees.
 
+### Fast fresh-window path
+
+Before the first action that depends on emitted runtime/process evidence, use the run boundary from `AUTOMATION_START` and bind the smallest stable evidence identity available:
+
+```text
+run start time
++ PID/session when there is a process
++ append-only log cursor/offset when there is a known log
++ expected readiness/event stop condition
+```
+
+After the action, read only the new output/delta from that same window. Batch adjacent known log sources into one evidence transaction when the tool supports it. Do not rediscover the whole log tree after every action.
+
+If the expected service/port/process is not listening/running, stop there: the first divergence is runtime readiness. Absence of a later heartbeat/event is then expected and must not be misclassified as a log-listener failure. Start/recover the owning runtime only through its canonical lifecycle path, then continue the same run/checkpoint and fresh window.
+
 A timeout means the command did not complete within budget. It does **not** erase partial stdout/stderr. Consume deterministic partial evidence first, then decide whether any fallback is still necessary.
 
 Persistent diagnostics can contain stale entries. When attribution matters, bind observation to the current run using a start time, PID/session, log offset, event cursor, cleared error surface, or another bounded fresh-evidence window. Historical errors are context, not current root cause, until the current scene reproduces them.
 
 Keep a stable identity for long work when available: current run/goal, PID or session, log/output location, start time, and expected stop condition. Only manage processes that the current run actually owns; unknown PIDs are observation-only.
+
+### Final lifecycle fixture hygiene
+
+Any temporary process, runtime, or fixture started by acceptance automation rather than the product's public lifecycle remains **harness state**. Track its run owner plus PID/session or equivalent resource identity and its cleanup condition.
+
+Before a stage-final cold stop/start/restart or production lifecycle proof, reconcile all acceptance-owned fixtures for the scene and require them to be gone unless the acceptance contract intentionally depends on them. If a lifecycle command fails while a mechanically proven acceptance-owned fixture still binds the same product port/resource, classify that first divergence as `HARNESS_FAILURE`: clean only the exact owned fixture, prove the resource is released, then rerun the same lifecycle scene. Do not diagnose or repair product lifecycle code until fixture contamination is removed. Unknown PIDs remain observation-only. A handoff must explicitly record any intentionally live owned fixture.
 
 ## RECOVER — continue existing state first
 

@@ -6,7 +6,6 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 
@@ -21,38 +20,29 @@ def run(args: list[str], cwd: Path, env: dict[str, str] | None = None, timeout: 
     return subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=True, timeout=timeout, check=False)
 
 
-def run_skill_creator(root: Path, env: dict[str, str]) -> None:
-    validator = Path.home() / ".codex/skills/.system/skill-creator/scripts/quick_validate.py"
-    if not validator.is_file():
-        fail(f"skill-creator validator missing: {validator}")
-
-    result = run([sys.executable, str(validator), str(root)], root, env)
-    missing_yaml = result.returncode != 0 and "No module named 'yaml'" in (result.stderr + result.stdout)
-    if missing_yaml:
-        with tempfile.TemporaryDirectory(prefix="skill-yaml-shim-") as temp:
-            shim = Path(temp) / "yaml.py"
-            shim.write_text(
-                "class YAMLError(Exception):\n    pass\n\n"
-                "def safe_load(text):\n"
-                "    out = {}\n"
-                "    for raw in str(text).splitlines():\n"
-                "        line = raw.strip()\n"
-                "        if not line or line.startswith('#'):\n            continue\n"
-                "        if ':' not in line:\n            raise YAMLError('unsupported yaml line')\n"
-                "        key, value = line.split(':', 1)\n"
-                "        key, value = key.strip(), value.strip()\n"
-                "        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('\\\"', \"'\"):\n            value = value[1:-1]\n"
-                "        out[key] = value\n"
-                "    return out\n",
-                encoding="utf-8",
-            )
-            shim_env = env.copy()
-            shim_env["PYTHONPATH"] = temp + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
-            result = run([sys.executable, str(validator), str(root)], root, shim_env)
-
-    if result.returncode != 0:
-        fail("skill-creator quick validation failed", result.stdout + result.stderr)
-    print("VALIDATE_STEP=skill-creator PASS")
+def validate_frontmatter(root: Path) -> None:
+    lines = (root / "SKILL.md").read_text(encoding="utf-8").splitlines()
+    if len(lines) < 4 or lines[0].strip() != "---":
+        fail("SKILL.md must start with YAML frontmatter")
+    try:
+        end = next(index for index in range(1, len(lines)) if lines[index].strip() == "---")
+    except StopIteration:
+        fail("SKILL.md frontmatter is not closed")
+    fields: dict[str, str] = {}
+    for raw in lines[1:end]:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if ":" not in line:
+            fail(f"unsupported frontmatter line: {raw}")
+        key, value = line.split(":", 1)
+        fields[key.strip()] = value.strip().strip("\"").strip("'")
+    for required in ("name", "description"):
+        if not fields.get(required):
+            fail(f"SKILL.md frontmatter missing {required}")
+    if fields["name"] != root.name:
+        fail(f"frontmatter name mismatch: {fields['name']} != {root.name}")
+    print("VALIDATE_STEP=frontmatter PASS")
 
 
 def validate_python_syntax(root: Path) -> None:
@@ -96,7 +86,7 @@ def main() -> None:
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
 
-    run_skill_creator(root, env)
+    validate_frontmatter(root)
 
     baseline = run([sys.executable, str(root / "scripts/validate-baseline.py")], root, env, timeout=90)
     if baseline.returncode != 0:

@@ -1,134 +1,56 @@
 # Tool Runtime, Browser Connection and Authentication
 
-Use this reference for `CONNECT`, `AUTHENTICATE`, and connection-related `RECOVER`. Tool infrastructure is not product state.
+本 reference 只管 `CONNECT / AUTHENTICATE / RECOVER`。Tool infrastructure 不是产品状态。
 
-## CONNECT — shared MCP runtime
-
-Canonical local lifecycle entrypoint:
+## Canonical MCP owner
 
 ```text
-/Users/agent/.local/bin/gptweb-mcp
-start | status | test | stop | restart
+/Users/agent/Desktop/proton-workspace/scripts/gptweb-mcp
+→ automation/gptweb-mcp/
+→ tools/local-dev | codegraph | repomix | browser
 ```
 
-The shared runtime manages `repomix`, `codegraph`, `local-dev`, and `playwright-chrome`. The existing manager is the only lifecycle owner. Do not create a second LaunchAgent, watchdog, KeepAlive job, private supervisor, or alternate manager.
+生成 profile 位于 `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/.runtime/profiles/`。`~/.config/tunnel-client/{local-dev,codegraph,repomix,playwright-chrome}.yaml` 是退役位置；四个 legacy alias profile 出现即 ownership conflict。第三方状态仍在 `/Users/agent/Library/Application Support/tunnel-client/health/<alias>.url` 等 tunnel-client 自有目录。
 
-`stop/restart` are shared disruptive actions. Do not use them merely to refresh discovery or because one call timed out. Confirm the affected layer first and avoid interrupting another active Chat/agent unless recovery actually requires reload or the user explicitly authorizes it.
+`SHARED-RUNTIME-OWNER-FIRST`：先读 canonical owner，再决定 reconnect/recover。**Do not directly spawn a second raw MCP server**，也不要创建第二 LaunchAgent、watchdog、broker 或 Browser controller。当前 workspace 没有 gptweb-mcp LaunchAgent。
 
-Use lifecycle evidence according to layer:
+Local Dev 由 `tools/local-dev/gptweb-mcp-service.sh` 管 tunnel-client + workspace `mcp-shared-broker`；Broker endpoint 位于 tunnel-client 的 `mcp-endpoints/local-dev.url`。runtime readiness 和 MCP execution endpoint 是不同 authority。
+
+Playwright canonical chain：
 
 ```text
-gptweb-mcp status/test
-→ manager/runtime summary
-
-/Users/agent/Library/Application Support/tunnel-client/health/<alias>.url
-+ GET <that-url>/readyz
-→ local per-runtime liveness when control-plane status is slow/ambiguous
-
-Browser tabs + snapshot/page screenshot
-→ actual Browser control authority
+gptweb-mcp
+→ automation/gptweb-mcp/.runtime/profiles/playwright-chrome.yaml
+→ tools/browser/playwright-chrome-broker.sh
+→ tools/mcp-shared-broker
+→ one @playwright/mcp --extension
+→ Playwright Extension → Chrome
 ```
 
-Do not collapse those authorities. A network/control-plane timeout in a status command is not proof that the local runtime is dead. Likewise, local runtime READY is not proof that Browser control is READY.
+Single process owner 不等于 per-consumer session isolation。多个 consumer 只能复用受支持的 broker surface；不得通过再起一个 controller 修 session bleed。
 
-`restart` is recovery, not diagnosis. After a required restart, use `status/test` or local liveness as appropriate, then prove Browser control separately and return to the original acceptance checkpoint.
+## Shared Browser guard
 
-## Playwright Browser connection proof ladder
+真实 Browser-control run：`AUTOMATION_START → shared lease → ACT/SEE/VERIFY → AUTOMATION_RUN → release`。Extension/Chrome/gptweb/tunnel-client/broker restart、Extension reload 或需要 restart 的 credential rotation 都必须先升级 `exclusive`。冲突时报 `SHARED_BROWSER_IN_USE`，不得抢 lease、杀其他 run 或重启共享 owner。
+
+owner READY 不等于 Browser control READY；`runtime_state=ready` 只证明 runtime 层。`browser_tabs` / snapshot 只能在 Acceptance 合同真的需要 Browser control 时使用，不能作为“已有 Extension 连接还活不活”的探针。已知连接存在时，新出现 `connect.html` 是 duplicate handshake，应停在 TOOL_RUNTIME_FAILURE/HARNESS boundary。
+
+## Credential
+
+唯一 Browser credential owner：
 
 ```text
-gptweb-mcp / tool runtime READY
-→ Playwright extension relay connected
-→ intended tab belongs to controlled context
-→ debugger/tool actually controls that tab
-→ snapshot/page screenshot can read intended content
+/Users/agent/Desktop/proton-workspace/tools/browser/.secrets/playwright-chrome.env
 ```
 
-Only the last two layers prove usable Browser control of the intended page.
+退役位置 `/Users/agent/.config/openai/tunnel-client/playwright-chrome.env` 和 `~/.config/tunnel-client/playwright-chrome.yaml` 不得重建为 active configuration。credential 变化只更新 Tool-owned 文件，绝不打印到 Chat、日志、截图证据或 telemetry。
 
-`chrome-extension://.../connect.html` is Playwright MCP tool infrastructure. It is not a product page and not OAuth/GitHub login. A visible `Failed to connect to MCP relay: WebSocket error` is first `SEE + CONNECT + RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`.
+## AUTHENTICATE
 
-A normal first bootstrap may open one `connect.html`; success means it visibly reaches connected state and subsequent business-page control proof succeeds. Repeated reappearance later must be classified as bootstrap/runtime/relay reconstruction before product mutation.
+Browser auth 是 owning CLI/PTTY 的同一 transaction continuation：CLI 明确 AUTH_EXPIRED/NOT_LOGGED_IN → Browser 完成人机步骤 → 回到原 transaction → CLI 重新确认。timeout/UNKNOWN 不是“未登录”，不能触发盲目 login。
 
-## Playwright Extension credential synchronization
+Microsoft Dev Tunnel 统一走 `/Users/agent/Desktop/proton-workspace/scripts/dev-tunnel auth [--login]`。Dev Tunnel auth 和 Playwright `connect.html` 是不同 surface。
 
-Canonical local environment file:
+## RECOVER
 
-```text
-/Users/agent/.config/openai/tunnel-client/playwright-chrome.env
-```
-
-When the Extension credential changes, obtain the **current** value from the Extension's current connect/status surface and update only that existing env file. Never guess or reuse a historical value, and never print/transcribe the credential into Chat, logs, repositories, screenshots text, telemetry, or test evidence.
-
-After an actual credential/config change:
-
-```text
-gptweb-mcp restart
-→ runtime/liveness readback
-→ connect.html current state if present
-→ browser_tabs + snapshot/page screenshot on intended business tab
-```
-
-If a credential has appeared in Chat or a screenshot, regenerate it after the incident/verification and resynchronize through the same path.
-
-Do not switch to an old CDP port, restart real Chrome, reinstall the Extension, or create a second relay merely because the first Browser call failed.
-
-## AUTHENTICATE — preserve the owning transaction
-
-Browser-mediated CLI authentication is a cross-surface continuation, not a new workflow:
-
-```text
-owning CLI/PTTY determines auth is required
-→ same transaction launches Browser auth
-→ ordinary auth page handled with Browser automation where safe
-→ unavoidable account consent / 2FA / CAPTCHA goes to the user
-→ return to same CLI/PTTY
-→ owning auth authority rechecks authenticated state
-→ continue original transaction
-```
-
-Do not infer "not logged in" from timeout alone. `UNKNOWN != NOT_LOGGED_IN`. Consume deterministic stdout/stderr/status evidence before starting a login mutation.
-
-### Known shared pattern — Microsoft Dev Tunnel Browser Auth
-
-When the product/tool owns a managed Microsoft Dev Tunnel CLI, use that product-owned binary/resolver; do not bypass it with a guessed PATH binary.
-
-```text
-devtunnel user show --json
-→ current login authority
-
-LOGGED_IN
-→ continue without Browser mutation
-
-AUTH_EXPIRED / NOT_LOGGED_IN
-→ devtunnel user login --github --use-browser-auth
-→ complete the same Browser-auth transaction
-→ devtunnel user show --json
-→ require LOGGED_IN before continuing
-```
-
-If `user show --json` times out, preserve partial stdout/stderr. Deterministic expired/login evidence may already classify the state; timeout alone must not trigger a second probe or login mutation. If evidence remains `UNKNOWN`, fail closed or use only the bounded product-owned diagnostic already specified by current product facts.
-
-Dev Tunnel auth pages and Playwright `connect.html` are different surfaces. If Playwright infrastructure fails during auth, repair the tool connection and return to the same auth transaction; do not restart the owning CLI/PTTY workflow.
-
-## RECOVER — tool failure stays tool failure
-
-Repair only the failed tool layer, then return to the same product scene. Do not restart setup/install/journey work, recreate product tabs/resources, or modify product code merely because automation connection was lost.
-
-If the original business tab still exists but controlled-group state was lost, recover that original tab into control context and prove it with `browser_tabs` plus snapshot/page screenshot. Do not duplicate the same business URL merely to make the tool see it.
-
-## Browser control ownership
-
-For one real Chrome profile using the Playwright Extension, establish one canonical MCP/controller as Browser owner for the current acceptance run.
-
-If another agent/client also requests the same Extension/Profile:
-
-```text
-identify intended owner
-→ leave competing request unapproved/disconnected
-→ recover/prove intended owner's relay + controlled context
-→ continue existing product scene
-```
-
-Do not approve multiple competing controllers merely because both are legitimate tools. A second controller may invalidate control state without changing product tabs or business state. Tool ownership loss is `CONNECT/RECOVER`, not product loss.
-
-Likewise, `runtime_state=ready` proves only the managed runtime layer. If `browser_tabs`/snapshot repeatedly cannot read the intended Browser context, Browser control is not READY; preserve product state and stay at relay/control recovery.
+只修 first divergence 所属 Tool 层，然后回原产品 checkpoint。不要因为 Tool 断线重建产品资源、重复 business tab、修改产品代码或 restart 整条链。Browser control ownership 始终是 broker-owned 单一 `Playwright MCP` upstream；第二 controller 是竞争 owner，不是恢复手段。

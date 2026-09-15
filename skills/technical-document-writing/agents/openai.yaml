@@ -1,0 +1,4 @@
+interface:
+  display_name: "Technical Document Writing"
+  short_description: "围绕读者任务、真实证据和工程机制写好一篇技术文档"
+  default_prompt: "Use $technical-document-writing to write one self-contained technical document for the target reader. Verify available facts first, organize the document around the reader's task and the real information relationships, keep claims close to evidence, and do not introduce document-governance machinery."

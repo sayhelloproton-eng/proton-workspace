@@ -96,8 +96,8 @@ A capability is **what action is needed**; a failure class is **why the current 
 - macOS AX + fresh screenshot implements privileged/native `SEE/IDENTIFY`; system keyboard/mouse/CGEvent implements privileged/native `ACT` when necessary.
 - Local Dev implements local CLI `ACT`, process/PID/file/runtime `IDENTIFY`, `WAIT/LISTEN`, and local authority `VERIFY`.
 - PTY/expect-style harnesses implement deterministic interactive CLI `ACT/WAIT/LISTEN`.
-- `/Users/agent/.local/bin/gptweb-mcp` implements shared tool-runtime lifecycle used by `CONNECT/RECOVER`; `restart` is recovery, not a generic diagnostic action.
-- Microsoft Dev Tunnel Browser Auth is a known `AUTHENTICATE` pattern when the product/tool already owns a managed Dev Tunnel CLI; use that product-owned resolver and current auth authority rather than guessing a system binary.
+- `/Users/agent/Desktop/proton-workspace/scripts/gptweb-mcp` is the canonical shared MCP lifecycle entrypoint used by `CONNECT/RECOVER`; `restart` is recovery, not a generic diagnostic action.
+- Microsoft Dev Tunnel uses the workspace-owned `/Users/agent/Desktop/proton-workspace/scripts/dev-tunnel` authority for managed CLI resolution, auth, create/reuse, host lifecycle and recovery. Products provide service topology and ingress policy; they must not guess a system `devtunnel` binary or recreate the lifecycle.
 
 Read specialized references only when those capabilities are needed.
 

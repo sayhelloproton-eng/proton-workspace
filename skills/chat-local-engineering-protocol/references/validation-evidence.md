@@ -38,6 +38,7 @@
 - 适配方向：默认 operation envelope 只携带完整文件 + `CREATE|REPLACE|DELETE` 操作、expected-state 和 verification-plan；receiver 本地派生 canonical manifest。旧 `MANIFEST` wire 仅保留兼容路径，不再属于默认模型协议。
 - zsh shell path 曾 timeout，而等价非交互 Git authority 用 `/bin/sh` ≈504ms 完成。
 - stable runner 曾因 macOS `/tmp` → `/private/tmp` realpath alias 错判 `repository root mismatch`；统一 realpath 后 regression PASS。
+- 另一次 frozen runner 在启动后才发现 envelope grammar 使用错误，materializer 在 mutation 前 FAIL_CLOSED。安全边界有效，但该 round trip 没有业务价值；payload grammar / required records 应在 `BUNDLE_READY` 前自审完成。
 
 结论：Data Plane 与 Control Plane 分离；Whole-file fast path 应让模型只表达“完整文件 + 操作”，机械 manifest/tar/apply/verify 由稳定 Local harness 派生和执行。
 
@@ -66,5 +67,13 @@
 最终文件正确不等于过程正确。无效 probe/search、重复 acquisition、错误 harness、无决策价值 polling、blind retry 或 benchmark scope expansion，都必须计入 `PROCESS_CORRECTNESS` / throughput 成本。
 
 Hidden oracle 可以隐藏实现，不能隐藏需求。若首次 oracle failure 才暴露 acceptance 未声明的 public contract，该样本应标记 `HARNESS_HIDDEN_REQUIREMENT` 并从 model-quality repair 统计中剥离。
+
+## 8. Visual refinement evidence
+
+一个近期 visible-Web 精修样本中，样式源码表面声明了对称上下 padding，但真实页面的可见上/下留白持续不一致。前两轮只按截图继续调 padding，未解决同一 criterion；随后读取 DOM geometry / computed grid tracks 才定位到隐藏第二行仍占 track、同时保留 row-gap，真正 owner 并不是 padding 本身。
+
+同一批交互还显示：手写 hover state + absolute offset 容易把 anchor、pointer transition、collision/focus 语义拆散，导致为了“浮层离图标太远”“鼠标移入内容就消失”等症状持续叠加补丁。成熟 primitive 若已存在，可一次性收敛这些通用交互语义。
+
+结论：visual refinement 的主要 throughput 风险不是 CSS 计算成本，而是 screenshot-only guessing 和 interaction reinvention。精确 layout claim 应用 geometry/computed style 定位 owner；同一 criterion 一次 repair 后仍失败必须先 root-cause measurement，再允许下一次 mutation。
 
 正反例不按事故逐条累加；新证据优先归入既有 evidence cluster。只有出现新的因果类别，才扩展本文件或 canonical rule。

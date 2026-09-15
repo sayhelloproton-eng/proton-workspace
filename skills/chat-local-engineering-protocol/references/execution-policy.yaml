@@ -116,6 +116,43 @@ verification:
   full_suite: stage_gate_only
   high_frequency_status_polling: forbidden
 
+long_running_processes:
+  known_slow_examples: [PACKAGE_BUILD, PUBLISHABILITY, RELEASE_PUBLISH, DEPLOY, INSTALL, FULL_SUITE]
+  terminal_not_required_same_turn:
+    start_once: true
+    detached_or_durable_process_preferred: true
+    record: [PID_OR_SESSION, LOG_PATH_WHEN_AVAILABLE, TERMINAL_AUTHORITY]
+    return_control_after_start: true
+    same_turn_status_polling_after_start: forbidden
+    same_turn_status_polling_target: 0
+    timeout_with_confirmed_pid_is_failure: false
+    replacement_process_on_timeout: forbidden
+  later_status_check_order: [TERMINAL_AUTHORITY, PID_OR_SESSION_ONCE, LOG_ONCE_IF_DEAD]
+  alive_without_terminal_authority: RUNNING_AND_STOP
+  non_idempotent_retry_requires: PROVEN_NOT_APPLIED_OR_FAILED
+  npm_publish_terminal_authority: EXACT_REGISTRY_VERSION
+  npm_publish_release:
+    synchronous_wait: forbidden
+    start_exactly_once_detached: true
+    record: [PID_OR_SESSION, LOG_PATH_WHEN_AVAILABLE, EXACT_PACKAGE_VERSION]
+    continue_independent_work_after_start: required
+    same_turn_process_output_wait: forbidden
+    same_turn_pid_polling: forbidden
+    same_turn_registry_polling_while_independent_work_exists: forbidden
+    if_no_independent_work: RETURN_CONTROL
+    later_decision_authority_first: "npm view <package>@<version> version"
+    registry_exact_present: APPLIED_PASS
+    registry_absent_then: [PID_OR_SESSION_ONCE, LOG_ONCE_IF_DEAD]
+    alive_without_registry_target: RUNNING_CONTINUE_OR_RETURN
+    retry_requires: PROVEN_NOT_APPLIED_OR_FAILED
+    overrides_terminal_required_same_turn_wait: true
+  terminal_required_same_turn:
+    same_session_wait_allowed: true
+    npm_publish_release_excluded: true
+    fixed_interval_polling: forbidden
+    sample_only_when_decision_value: true
+  repeated_polling_violation_severity: HIGH
+
 recovery:
   timeout_unknown_order: [SAME_PID_OR_SESSION, AUTHORITY_RECOVERY, RETRY_ONLY_AFTER_PROVEN_FAILURE]
   deterministic_terminal_marker_preferred: "chat-local-result>"
@@ -129,6 +166,7 @@ metrics:
   phase_timing_missing_value: null
   phase_timing_values_must_be_observed_not_estimated: true
   timing_only_tool_calls: forbidden
+  known_slow_detached_same_turn_polls_target: 0
   frozen_control_plane_model_reentries_target: 0
   model_authored_manifest_target: 0
   ready_to_payload_intervening_tool_calls_target: 0
@@ -198,3 +236,7 @@ self_hosting:
 git:
   preserve_existing_wip: required
   stage_or_commit_without_explicit_user_request: forbidden
+  explicit_publish_release_instruction_authorizes_release_bound_commits: true
+  release_bound_commit_scope: FORMAL_RELEASE_WORKFLOW_ONLY
+  second_confirmation_for_release_bound_commit: not_required
+  unrelated_commit_or_push_authorized: false

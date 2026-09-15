@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineering Retrospective"
+  short_description: "筛出并沉淀真正会改变未来工程判断的经验"
+  default_prompt: "Use $engineering-retrospective to run a lightweight retention gate on this engineering episode. Capture a lesson only when evidence, mechanism and future action justify it; otherwise skip or request evidence."

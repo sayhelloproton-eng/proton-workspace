@@ -21,28 +21,36 @@ def require(text: str, token: str, owner: str) -> None:
         fail(f"missing {token!r} in {owner}")
 
 
-def run_logger(root: Path, record: dict) -> subprocess.CompletedProcess[str]:
+def run_logger(root: Path, record: dict, ledger_path: Path) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    with tempfile.TemporaryDirectory(prefix="acceptance-log-probe-") as temp:
-        input_path = Path(temp) / "event.json"
-        ledger_path = Path(temp) / "ledger.jsonl"
-        input_path.write_text(json.dumps(record), encoding="utf-8")
-        return subprocess.run(
-            [sys.executable, str(root / "scripts/append-run-log.py"), "--input", str(input_path), "--ledger", str(ledger_path)],
-            text=True,
-            capture_output=True,
-            env=env,
-            timeout=20,
-            check=False,
-        )
+    return subprocess.run(
+        [sys.executable, str(root / "scripts/append-run-log.py"), "--input", "-", "--ledger", str(ledger_path)],
+        input=json.dumps(record),
+        text=True,
+        capture_output=True,
+        env=env,
+        timeout=20,
+        check=False,
+    )
 
 
 def expect_logger(root: Path, record: dict, should_pass: bool, label: str) -> None:
-    result = run_logger(root, record)
-    passed = result.returncode == 0
-    if passed != should_pass:
-        fail(f"logger probe {label} expected {'PASS' if should_pass else 'FAIL'} but exit={result.returncode}")
+    with tempfile.TemporaryDirectory(prefix="acceptance-log-probe-") as temp:
+        result = run_logger(root, record, Path(temp) / "ledger.jsonl")
+        passed = result.returncode == 0
+        if passed != should_pass:
+            fail(f"logger probe {label} expected {'PASS' if should_pass else 'FAIL'} but exit={result.returncode}")
+
+
+def expect_logger_sequence(root: Path, steps: list[tuple[dict, bool]], label: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="acceptance-log-sequence-") as temp:
+        ledger = Path(temp) / "ledger.jsonl"
+        for index, (record, should_pass) in enumerate(steps, 1):
+            result = run_logger(root, record, ledger)
+            passed = result.returncode == 0
+            if passed != should_pass:
+                fail(f"logger sequence {label} step {index} expected {'PASS' if should_pass else 'FAIL'} but exit={result.returncode}")
 
 
 def check_text_hygiene(root: Path) -> None:
@@ -94,9 +102,9 @@ def main() -> None:
         "KNOWN-PATH-FIRST", "FIRST-DIVERGENCE-BEFORE-FALLBACK", "USER-PATH-INTEGRITY",
         "ACCEPTANCE-LEVEL-AWARE", "CHECKPOINT-AFTER-PROOF", "FAILURE-CLASSIFY-BEFORE-REPAIR",
         "SIDE-EFFECT-RECONCILIATION", "MINIMUM-SUFFICIENT-PROOF",
-        "CONTINUE-EXISTING-BEFORE-RESTART", "HARNESS-VALID-BEFORE-SCORING",
-        "EVIDENCE-GOVERNED-EVOLUTION", "DETERMINISTIC-MECHANICS-BELOW-MODEL",
-        "REALITY-IS-ACCEPTANCE-NOT-THE-MAIN-DEBUGGER",
+        "CONTINUE-EXISTING-BEFORE-RESTART", "RUN-BOUNDARY-FIRST", "RETURN-CONTROL-CLOSES-RUN",
+        "HARNESS-VALID-BEFORE-SCORING", "EVIDENCE-GOVERNED-EVOLUTION",
+        "DETERMINISTIC-MECHANICS-BELOW-MODEL", "REALITY-IS-ACCEPTANCE-NOT-THE-MAIN-DEBUGGER",
     ]
     for rule in hard_rules:
         require(skill, rule, "SKILL.md")
@@ -112,6 +120,7 @@ def main() -> None:
     for token in (
         "/Users/agent/.config/openai/tunnel-client/playwright-chrome.env",
         "/Users/agent/Library/Application Support/tunnel-client/health/<alias>.url",
+        "SHARED-RUNTIME-OWNER-FIRST", "Do not directly spawn a second raw MCP server",
         "Browser control ownership", "runtime_state=ready", "browser_tabs",
     ):
         require(runtime, token, "tool-runtime-and-auth.md")
@@ -131,16 +140,17 @@ def main() -> None:
         if forbidden in project:
             fail(f"legacy project-instructions responsibility remains: {forbidden}")
 
-    for index in range(1, 24):
+    for index in range(1, 25):
         require(lost, f"## R{index} —", "lost-context-regression.md")
-    for index in range(1, 9):
+    for index in range(1, 10):
         require(lost, f"`B{index}", "lost-context-regression.md")
 
     for layer in ("L0", "L1", "L2", "L3"):
         require(validation, f"### {layer}", "validation-baseline.md")
     for token in (
         "scripts/validate-skill.py", "secret-like values", "Single-source regression",
-        "SINGLE-AUTOMATION-SOURCE-OF-TRUTH",
+        "SINGLE-AUTOMATION-SOURCE-OF-TRUTH", "missing AUTOMATION_START",
+        "shared-runtime owner-first / duplicate-spawn guard", "Runtime/API owner proof first",
     ):
         require(validation, token, "validation-baseline.md")
 
@@ -156,23 +166,55 @@ def main() -> None:
     for token in (".runs/", "__pycache__/", "*.py[cod]"):
         require(ignore, token, ".gitignore")
 
-    for token in ("CONTEXT_KNOWLEDGE_MIGRATION_GAP", "sideEffectState", "embedded secret-like values"):
+    for token in (
+        "CONTEXT_KNOWLEDGE_MIGRATION_GAP", "sideEffectState", "embedded secret-like values",
+        "AUTOMATION_START", "TERMINAL_RUN_LOG_MISSED", "freshEvidenceWindowBound",
+        ".runs/tmp/<runId>/", ".runs/artifacts/<runId>/",
+    ):
         require(logging, token, "run-logging.md")
+
+    for token in ("Fast fresh-window path", "runtime readiness", "log cursor/offset"):
+        require((root / "references/cli-pty-and-process.md").read_text(encoding="utf-8"), token, "cli-pty-and-process.md")
 
     check_text_hygiene(root)
 
-    valid = {
+    start = {
+        "eventType": "AUTOMATION_START", "runId": "baseline-valid",
+        "neededCapabilities": ["LISTEN", "VERIFY"], "freshEvidenceWindowBound": True,
+        "acceptanceMode": "DIRECT",
+    }
+    terminal = {
         "runId": "baseline-valid", "outcome": "DONE", "failureClass": "NONE",
         "sideEffectState": "NOT_APPLICABLE", "testLayer": "L2",
         "harnessValidity": "VALID", "behavioralVerdict": "PASS",
     }
-    expect_logger(root, valid, True, "valid-l2")
-    expect_logger(root, {**valid, "harnessValidity": "INVALID", "behavioralVerdict": "PASS"}, False, "invalid-harness-pass")
-    expect_logger(root, {**valid, "testLayer": "L9"}, False, "invalid-layer")
-    expect_logger(root, {**valid, "sideEffectState": "MAYBE"}, False, "invalid-side-effect")
-    expect_logger(root, {**valid, "apiKey": "dummy"}, False, "secret-key")
-    expect_logger(root, {**valid, "note": "PLAYWRIGHT_MCP_EXTENSION_TOKEN=dummy-not-a-real-secret"}, False, "secret-value")
-    expect_logger(root, {**valid, "failureClass": "CONTEXT_KNOWLEDGE_MIGRATION_GAP"}, True, "context-gap-class")
+    expect_logger_sequence(root, [(start, True), (terminal, True)], "paired-valid-l2")
+    expect_logger_sequence(root, [(start, True), (start, False)], "duplicate-start")
+    expect_logger(root, terminal, False, "terminal-without-start")
+    expect_logger(
+        root,
+        {"eventType": "AUTOMATION_START", "runId": "fresh-window-required", "neededCapabilities": ["LISTEN"], "freshEvidenceWindowBound": False},
+        False,
+        "listen-without-fresh-window",
+    )
+
+    retrospective = {
+        "runId": "retrospective-valid", "outcome": "BLOCKED",
+        "failureClass": "PREREQUISITE_NOT_READY", "sideEffectState": "NOT_APPLICABLE",
+        "retrospectiveReconciliation": True, "evidenceProvenance": "authoritative runtime readback",
+        "capabilityMisses": ["TERMINAL_RUN_LOG_MISSED"],
+    }
+    expect_logger(root, retrospective, True, "retrospective-valid")
+    expect_logger(root, {**retrospective, "evidenceProvenance": ""}, False, "retrospective-no-provenance")
+    expect_logger(root, {**retrospective, "capabilityMisses": []}, False, "retrospective-no-miss")
+
+    negative_base = {**retrospective, "runId": "negative-base"}
+    expect_logger(root, {**negative_base, "harnessValidity": "INVALID", "behavioralVerdict": "PASS"}, False, "invalid-harness-pass")
+    expect_logger(root, {**negative_base, "testLayer": "L9"}, False, "invalid-layer")
+    expect_logger(root, {**negative_base, "sideEffectState": "MAYBE"}, False, "invalid-side-effect")
+    expect_logger(root, {**negative_base, "apiKey": "dummy"}, False, "secret-key")
+    expect_logger(root, {**negative_base, "note": "PLAYWRIGHT_MCP_EXTENSION_TOKEN=dummy-not-a-real-secret"}, False, "secret-value")
+    expect_logger(root, {**negative_base, "failureClass": "CONTEXT_KNOWLEDGE_MIGRATION_GAP"}, True, "context-gap-class")
 
     public_core = skill + common + browser + runtime + validation + evolution
     for forbidden in ("Real-3", "@tomflow", "platform start", "ProFlow Tasks"):
@@ -181,9 +223,10 @@ def main() -> None:
 
     print("ACCEPTANCE_BASELINE=PASS")
     print("CAPABILITY_COUNT=9")
-    print("REGRESSION_SCENARIOS=23")
-    print("BEHAVIORAL_SMOKE_CASES=8")
+    print("REGRESSION_SCENARIOS=24")
+    print("BEHAVIORAL_SMOKE_CASES=9")
     print("SINGLE_AUTOMATION_TRUTH=PASS")
+    print("RUN_BOUNDARY_GUARDS=PASS")
     print("LOGGER_GUARDS=PASS")
     print("EVOLUTION_GOVERNANCE=PASS")
 

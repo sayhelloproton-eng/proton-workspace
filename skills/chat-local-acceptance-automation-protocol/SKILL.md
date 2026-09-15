@@ -20,10 +20,10 @@ Reduce model cognition during real automation. Select a known capability/path, e
 Default loop:
 
 ```text
-NEED → CAPABILITY → KNOWN PATH/SCRIPT → ACT → CURRENT REALITY
+RUN BOUNDARY → NEED → CAPABILITY → KNOWN PATH/SCRIPT → EXECUTE MINIMUM NEEDED CAPABILITY → CURRENT REALITY
 → FIRST DIVERGENCE / MINIMUM SUFFICIENT PROOF
 → SIDE-EFFECT RECONCILIATION when uncertain
-→ CHECKPOINT → CONTINUE / RECOVER / STOP
+→ CHECKPOINT → CONTINUE / RECOVER / STOP → TERMINAL RUN RECORD
 ```
 
 Do not begin from tool names. Begin from the capability needed now.
@@ -36,6 +36,12 @@ Read [references/common-capabilities.md](references/common-capabilities.md) for 
 ## Execution rules — HARD RULES
 
 **EYES-FIRST.** If an action has a decision-relevant visible result, confirm current UI reality immediately. `EYES` means the authoritative current surface, not "take a screenshot after every action": on attachable ordinary Web prefer semantic DOM/snapshot state when it answers the question; use page screenshot when pixels, layout, visual status, geometry, or an error surface matter. On privileged/native UI, fresh screenshot + AX is the primary eyes path.
+
+**SEE-BEFORE-CONTROL-RECOVERY.** When the acceptance question is observation-only and a fresh screenshot, semantic DOM/snapshot, or fresh user-provided image can answer it, remain in `SEE/VERIFY`. Do not escalate to `CONNECT/RECOVER`, repair Browser ownership/session isolation, restart relay/controller, select/create tabs, or mutate foreground merely to obtain observation. A broken or contended control path is not a blocker for an observation that has an independent read-only eyes path. Escalate Browser control only when the contract genuinely requires `ACT`, permission/system interaction, exact pointer/hover semantics, or the required evidence cannot be obtained through the read-only path. This rule outranks “fix the harness first” convenience.
+
+**REUSE-EXISTING-BROWSER-CONNECTION.** If the canonical Playwright owner/Extension connection is already present or READY, or fresh visible evidence proves an existing `Playwright MCP` connection, a later Browser-tool attempt that opens another `chrome-extension://.../connect.html` or connection prompt is a duplicate handshake unless current owner authority proves the existing connection is unusable. Once such an existing connection is known, do not invoke a Playwright Browser tool merely to probe whether Browser control/readiness is usable: even an apparently read-only call can initialize another downstream client/Extension handshake and open a fresh `connect.html` before returning evidence. Use non-Playwright owner/liveness evidence, an independent read-only eyes path, or a fresh user-provided screenshot for observation; if the contract genuinely requires Browser control and it cannot be proven without invoking Playwright, preserve `UNKNOWN / HARNESS_BLOCKED` rather than probing speculatively. Do not approve the new connection, copy/configure its connection credential, restart the relay/controller, or create a second Browser owner merely to satisfy `SEE/VERIFY`. Preserve the existing connection and product tabs; use the existing read-only eyes path or fresh user-provided screenshot when sufficient, otherwise classify the observation path unavailable. Enter `CONNECT/RECOVER` only when the acceptance contract genuinely requires Browser control and current authority proves the existing connection cannot serve it. This rule outranks tool-driven reconnect convenience.
+
+**SHARED-BROWSER-USAGE-GUARD.** The real Chrome profile, Playwright Extension, broker, and canonical Playwright owner are shared infrastructure. After `AUTOMATION_START` and before the first Playwright Browser operation or mutation of Browser connection state, acquire a `shared` lease with `scripts/browser-usage-guard.py`. Multiple normal Browser consumers may hold `shared` leases and must still obey atomic-scene rules. Before any globally disruptive action—Extension reload/disable-enable, Chrome quit/restart/profile restart, `gptweb-mcp`/tunnel/broker/Playwright-owner stop or restart, or credential rotation that requires restart—the same run MUST first acquire or upgrade to an `exclusive` lease. If any other active Browser lease exists, fail closed at `SHARED_BROWSER_IN_USE`; do not reload, kill, restart, rotate, or steal ownership. The lease is coordination authority only, not Browser-readiness proof. Append the terminal `AUTOMATION_RUN` before releasing the lease; abandoned open runs remain visible until explicitly reconciled. Detailed mechanics live in [references/tool-runtime-and-auth.md](references/tool-runtime-and-auth.md).
 
 **IDENTIFY-BEFORE-MUTATE.** Freshly prove the target identity before mutation, and again in a destructive confirmation surface when available. Position, tab index, stale coordinates, global AX order, or "the first matching control" are not identity. Automation control context is runtime state, not durable business identity.
 
@@ -56,6 +62,10 @@ Read [references/common-capabilities.md](references/common-capabilities.md) for 
 **MINIMUM-SUFFICIENT-PROOF.** Collect only the evidence required by the acceptance contract for the next decision. A visible-only fact may need one current UI readback; a cross-layer fact may require user reality plus the exact owner/runtime authority. Stop when the contract is satisfied.
 
 **CONTINUE-EXISTING-BEFORE-RESTART.** Recover the current PID/session/PTTY/tab/auth transaction/checkpoint before starting again. `UNKNOWN` is never permission for a blind retry or duplicate product resource.
+
+**RUN-BOUNDARY-FIRST.** Before the first acceptance mutation, long wait, connect/recover step, or log-dependent verification, append exactly one `AUTOMATION_START` for the run and bind the fresh-evidence window. The start record is the minimum time boundary; when `WAIT`, `LISTEN`, `CONNECT`, or `RECOVER` is needed, also bind the stable PID/session/log cursor or equivalent owner evidence when available before the first relevant action. Reuse the same `runId` through the scene and append one terminal `AUTOMATION_RUN` before returning control. A missed historical terminal record is repaired only by explicit retrospective reconciliation; never silently pretend it was logged on time.
+
+**RETURN-CONTROL-CLOSES-RUN.** If this Chat opened an `AUTOMATION_START`, it must not return control through a final answer, handoff, explicit stop, or tool-blocked status until it has appended the truthful terminal `AUTOMATION_RUN` and run `check-open-runs.py --run-id <runId> --fail-on-open`. When turn/tool capacity is degrading, close the run truthfully at the current checkpoint before spending time on optional diagnosis. If logging infrastructure itself is unavailable, report `AUTOMATION_LOGGING=FAIL`, preserve the open-run evidence, and never claim that the run was closed.
 
 **HARNESS-VALID-BEFORE-SCORING.** A behavioral/lost-context result counts only when the harness supplied the complete current Skill, all conditional references required by the scenario, and the current product facts/spec needed by any project-specific question. A truncated paraphrase, historical-chat contamination, leaked expected answer, or broken Browser/tool control makes the sample `HARNESS_INVALID`.
 
@@ -80,7 +90,17 @@ Do not load all references by default. Project-specific automation references ar
 
 ## Run evidence — HARD RULE
 
-Every acceptance automation run that reaches `DONE`, `FAIL_CLOSED`, `BLOCKED`, `UNKNOWN`, or a hand-off appends one compact record with `python3 scripts/append-run-log.py --input <result.json>`. Behavioral self-tests may use `testLayer`, `harnessValidity`, and `behavioralVerdict`; invalid harness samples remain evidence but never count as model-quality failures.
+Every real acceptance automation run uses one paired run boundary:
+
+```text
+AUTOMATION_START(runId, fresh evidence boundary)
+→ real acceptance work
+→ AUTOMATION_RUN(same runId, terminal or hand-off outcome)
+```
+
+Use `python3 scripts/append-run-log.py --input -` by default. A terminal event without a prior start fails closed unless it is an explicit historical repair using `retrospectiveReconciliation=true`, a non-empty `evidenceProvenance`, and capability miss `TERMINAL_RUN_LOG_MISSED`. Behavioral self-tests may use `testLayer`, `harnessValidity`, and `behavioralVerdict`; invalid harness samples remain evidence but never count as model-quality failures.
+
+After writing the terminal record and before returning control, mechanically prove the current run is closed with `python3 scripts/check-open-runs.py --run-id <runId> --fail-on-open`. The checker is read-only; it never invents or repairs a terminal result. Project-wide open-run output is hygiene evidence only and historical gaps still require retrospective reconciliation.
 
 If logging fails, report `AUTOMATION_LOGGING=FAIL` without rerunning product mutation.
 

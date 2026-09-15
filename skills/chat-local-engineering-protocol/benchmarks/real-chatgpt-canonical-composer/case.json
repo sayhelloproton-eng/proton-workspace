@@ -1,0 +1,72 @@
+{
+  "contract": "chat-local-throughput-case.v3",
+  "id": "real-chatgpt-canonical-composer-clean-replay",
+  "repo": "proflow",
+  "baselineCommit": "9d69ad3c84ba76b2cd98c3357e408a1ddbf07249",
+  "historicalFixCommit": "d40d37101ce75ab0a81be1faf0f40a8d7151bd3e",
+  "scenario": "S1_KNOWN_SCOPE_SMALL_SEMANTIC",
+  "changedFiles": [
+    "target/packages/execution-browser-extension/src/chatgpt-runtime-adapter.ts",
+    "target/packages/execution-browser-extension/tests/chatgpt-composer.test.ts"
+  ],
+  "mutations": [
+    {
+      "operation": "REPLACE",
+      "path": "packages/execution-browser-extension/src/chatgpt-runtime-adapter.ts"
+    },
+    {
+      "operation": "REPLACE",
+      "path": "packages/execution-browser-extension/tests/chatgpt-composer.test.ts"
+    }
+  ],
+  "readOnlyDependencies": [
+    "target/packages/execution-browser-extension/src/composer-submit.ts",
+    "target/packages/execution-browser-extension/src/carrier-permission.ts"
+  ],
+  "hiddenOracleTest": "target/packages/execution-browser-extension/tests/.hidden-oracle-chatgpt-composer.test.ts",
+  "targetWallGateSec": 180,
+  "hiddenOracleFairness": "all required public contracts are explicit in acceptance.md",
+  "applyAuthority": {
+    "contract": "chat-local-expected-state.v1",
+    "repoRoot": "/Users/agent/Desktop/proton-workspace/skills/chat-local-engineering-protocol/benchmarks/real-chatgpt-canonical-composer/target",
+    "head": null,
+    "branch": null,
+    "files": {
+      "packages/execution-browser-extension/src/chatgpt-runtime-adapter.ts": {
+        "exists": true,
+        "sha256": "98758557b42ba51fe4e89da29259d21cd005a1a0389fd9d4e50dc7c3ef6afe3d"
+      },
+      "packages/execution-browser-extension/tests/chatgpt-composer.test.ts": {
+        "exists": true,
+        "sha256": "215b8f36b37b5412a9fcd1cc4aa1211f234b3a20659008019967b0ac2c49db87"
+      }
+    }
+  },
+  "verificationPlan": {
+    "contract": "chat-local-verification-plan.v1",
+    "commands": [
+      {
+        "label": "candidate-plus-hidden-oracle",
+        "command": "/usr/bin/env",
+        "args": [
+          "node",
+          "--test",
+          "packages/execution-browser-extension/tests/chatgpt-composer.test.ts",
+          "packages/execution-browser-extension/tests/.hidden-oracle-chatgpt-composer.test.ts"
+        ],
+        "cwd": ".",
+        "timeoutMs": 120000,
+        "expectedExitCode": 0
+      }
+    ]
+  },
+  "wireProtocol": {
+    "runner": "/Users/agent/Desktop/proton-workspace/skills/chat-local-engineering-protocol/scripts/execute-frozen-decision.mjs",
+    "readyMarker": "chat-local>",
+    "terminalMarker": "chat-local-result>",
+    "payloadTransactionsTarget": 1,
+    "modelAuthoredManifestTarget": 0,
+    "manifestOwnership": "LOCAL_DERIVED",
+    "mechanicalModelReentryTarget": 0
+  }
+}
