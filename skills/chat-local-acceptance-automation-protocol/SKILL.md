@@ -1,6 +1,6 @@
 ---
 name: chat-local-acceptance-automation-protocol
-description: Single source of truth for ChatGPT Chat local acceptance automation: eyes first, user-path reality, first divergence, safe shared-browser control, checkpoint recovery, and stage-final proof.
+description: "Single source of truth for ChatGPT Chat local acceptance automation: eyes first, user-path reality, first divergence, safe shared-browser control, checkpoint recovery, and stage-final proof."
 ---
 
 # Chat Local Acceptance Automation Protocol

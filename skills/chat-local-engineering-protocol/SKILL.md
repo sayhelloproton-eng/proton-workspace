@@ -1,6 +1,6 @@
 ---
 name: chat-local-engineering-protocol
-description: High-throughput staged protocol for ChatGPT Chat local engineering: reality first, one owner, complete implementation stages, non-blocking long work, whole-file mutation, and verification/release only at stage gates.
+description: "High-throughput staged protocol for ChatGPT Chat local engineering: reality first, one owner, complete implementation stages, non-blocking long work, whole-file mutation, and verification/release only at stage gates."
 ---
 
 # Chat 本机工程协议
