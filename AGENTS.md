@@ -1,8 +1,33 @@
 # AGENTS.md
 
+## ChatGPT Chat → Local Engineering Protocol｜CHATGPT-ONLY
+
+`CHATGPT_CHAT_LOCAL_ENGINEERING_PROTOCOL=REQUIRED`
+
+本节**仅适用于 ChatGPT Chat** 通过 CodeGraph、Repomix、Local Dev、Playwright/AX 等工具编排本机工程。ChatGPT Chat 在执行本机 mutation / test / build / Git write 前必须读取并遵循：
+
+`/Users/agent/Desktop/proton-workspace/skills/chat-local-engineering-protocol/SKILL.md`
+
+该共享 Skill 是 ChatGPT Chat ↔ Local execution mechanics 的 workspace-level 单一规则 owner。仓库规则只补充项目语义、领域、安全、Review 与发布约束；更严格的仓库规则对 ChatGPT Chat 继续生效。当前 Chat 已读取同版本后无需重复读取。
+
+**Codex exclusion — HARD:** Codex / GPT-6 Codex / Codex app / Codex CLI / app-server/runtime / Codex-native sessions 必须忽略本节，也不得因为本节被要求读取上述 shared Skill。本节不改变 Codex 的 AGENTS 层级、仓库工作流、skills、CLI/hooks、shell environment 或任何本机 Codex 配置；Codex 继续仅遵循本文件其余原有的非 ChatGPT 项目规则。
+
 ## Workspace role
 
 This repository is the personal multi-product engineering workspace `proton-workspace`.
+
+## Public knowledge base audience — HARD RULE
+
+`docs/知识库/` 面向外部技术读者，尤其是第一次了解本人真实工程工作的技术面试官、Tech Lead 和未来同事。它应自然呈现项目为什么发生、怎样演进、遇到什么问题、形成什么成果与工程认识，而不是把内部资料按文档类型搬进去。
+
+硬边界：
+
+1. `docs/知识库/` 不是内部过程仓、项目仓库镜像或文档类型分类树。
+2. 不按“学习 / 调研 / 实验 / 复盘 / 技术方案”等形成方式作为一级导航；这些是材料属性，不是正式知识结构。
+3. 项目实践是主要事实来源，工程专题从真实问题中自然形成；二者可以互相引用，但不建立严格一一映射、路径依赖或复杂同步机制。
+4. 每个公开主题都应能回到真实项目、代码、测试、运行、事故、Eval 或其他可核验事实；计划和推断不得写成已完成能力。
+5. 内部工作材料应服务本人和 AI 的持续工程工作，并与公开知识库的阅读结构解耦。
+6. 最终知识结构必须基于真实迁移后的项目与工程资产确认，不为了目录对称提前制造空分类。
 
 ## Hard boundaries
 
@@ -12,9 +37,9 @@ This repository is the personal multi-product engineering workspace `proton-work
 4. Never create cross-repository `workspace:`, relative package, or link dependencies between the root workspace and products.
 5. Workspace orchestration may invoke a product's own documented `test`, `build`, `release`, `publish`, or equivalent commands, but must not take ownership of that product's internal package graph.
 6. Do not commit product source from `repos/**` into this repository.
-7. `repos/ai-agent-platform/`, when present, is legacy/reference-only unless an explicit task says otherwise.
+7. Retired predecessor repositories are reference-only and must not be treated as current platform, runtime, documentation, or governance truth.
 8. Do not invent a final new-platform name or platform instance directory before that naming decision is frozen.
-9. Keep the workspace root minimal. Do not pre-create `artifacts/`, `config/`, `docs/`, `scripts/`, `tools/`, `tmp/`, or similar directories without a real requirement.
+9. Keep the workspace root minimal; create shared directories only when a real owner or capability exists.
 10. Prefer Node.js built-in capabilities and already-frozen workspace tooling over adding dependencies without evidence.
 
 ## Runtime baseline

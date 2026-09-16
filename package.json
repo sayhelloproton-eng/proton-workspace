@@ -1,10 +1,28 @@
 {
-  "name": "proton-workspace",
-  "version": "0.0.0",
   "private": true,
-  "type": "module",
-  "packageManager": "pnpm@11.21.0",
-  "engines": {
-    "node": "24.19.0"
+  "dependencies": {
+    "@tomflow/proflow-agent-controller-dev": "0.1.21",
+    "@tomflow/proflow-agent-gateway": "0.1.19",
+    "@tomflow/proflow-agent-product": "0.1.19",
+    "@tomflow/proflow-agent-runtime": "0.1.17",
+    "@tomflow/proflow-agent-test-ops": "0.1.21",
+    "@tomflow/proflow-chrome-runtime": "0.1.15",
+    "@tomflow/proflow-deployment-conformance": "0.1.13",
+    "@tomflow/proflow-dev-tunnel": "0.1.36",
+    "@tomflow/proflow-execution-browser-extension": "0.1.64",
+    "@tomflow/proflow-execution-contracts": "0.1.11",
+    "@tomflow/proflow-execution-local": "0.1.16",
+    "@tomflow/proflow-execution-runtime": "0.1.19",
+    "@tomflow/proflow-model-contracts": "0.1.10",
+    "@tomflow/proflow-model-provider-api": "0.1.17",
+    "@tomflow/proflow-model-runtime": "0.1.25",
+    "@tomflow/proflow-module-contract": "0.1.13",
+    "@tomflow/proflow-module-skill": "0.1.11",
+    "@tomflow/proflow-module-template": "0.1.10",
+    "@tomflow/proflow-platform-cli": "0.1.51",
+    "@tomflow/proflow-platform-host": "0.1.30",
+    "@tomflow/proflow-task-migration-runner": "0.1.11",
+    "@tomflow/proflow-task-orchestration": "0.1.12",
+    "@tomflow/proflow-task-store-sqlite": "0.1.12"
   }
 }

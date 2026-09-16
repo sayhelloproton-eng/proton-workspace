@@ -8,5 +8,11 @@ node_modules/
 .env.*
 !.env.example
 
+# Tool-local credentials. Never commit.
+.secrets/
+
+# Owner-local runtime artifacts stay with their owning Skill/Tool.
+.runtime/
+
 # Product repositories are physically nested but versioned independently.
 /repos/*/

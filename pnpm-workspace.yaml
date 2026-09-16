@@ -1,3 +1,12 @@
-# Root workspace only manages packages owned by proton-workspace.
-# Product repositories under repos/** are intentionally excluded.
-packages: []
+packages:
+  - 'repos/proflow/packages/*'
+
+minimumReleaseAgeExclude:
+  - '@tomflow/proflow-agent-controller-dev@0.1.21'
+  - '@tomflow/proflow-agent-gateway@0.1.18 || 0.1.19'
+  - '@tomflow/proflow-agent-product@0.1.18 || 0.1.19'
+  - '@tomflow/proflow-agent-runtime@0.1.17'
+  - '@tomflow/proflow-agent-test-ops@0.1.21'
+  - '@tomflow/proflow-execution-browser-extension@0.1.62 || 0.1.63 || 0.1.64'
+  - '@tomflow/proflow-platform-host@0.1.29 || 0.1.30'
+  - '@tomflow/proflow-task-orchestration@0.1.12'
