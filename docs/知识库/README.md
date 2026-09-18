@@ -162,3 +162,18 @@ ProFlow Runtime / Task / Tool Capability
 | **Skills & Automation** | 把重复出现的工程方法和机械流程从聊天经验中抽离 | 工程协议、验收、知识发布、本机工具链和稳定自动化开始形成 workspace 级可复用能力，让不同项目共享方法但不共享产品真值 |
 
 这些项目最终都在回答同一个问题：**一个真正能长期工作的 Agent 系统，除了模型以外，还需要哪些工程能力？** 目前逐渐形成的共同认识是：模型负责高价值判断，Runtime 和工具负责真实执行，项目拥有自己的产品真值，自动化负责稳定机械动作，验证负责把“我觉得成功了”变成可复核事实。
+
+## 7. 正式知识入口
+
+项目仓库和运行事实负责回答“现在系统是什么”，正式知识库负责回答“这些实践最终说明了什么”。当前已经形成的主干知识可以从下面进入：
+
+- [现代 AI 工程：从模型智能到长期 Agent 系统](./现代AI工程/README.md)：从 Transformer、RAG、Tool、Agent、Runtime、Multi-Agent 一路讲到 Eval、Platform、小模型与真实岗位，是整套知识的连续学习主线；
+- [Agent 工程复杂度与边界](./Agent工程复杂度与边界.md)：回答什么时候应该升级复杂度，什么时候应该主动降级；
+- [Agent、Skill、Tool、Script 与 Workflow 的职责边界](./Agent-Skill-Tool-Workflow职责边界.md)：回答判断、方法、能力、确定执行和长期状态分别应该由谁负责；
+- [本机 Agent 工具链](./本机Agent工具链.md)：记录 Chat 如何通过本机事实工具、Skill 和自动化进入真实工程环境；
+- [端侧模型](./端侧模型.md)：记录端侧模型从实验对象收敛成受 Runtime 治理推理节点的真实过程；
+- [Coding Agent 真正竞争的是什么](./Coding-Agent.md)：持续维护 Coding Agent、Harness、Runtime、Workspace 与生态边界；
+- [OpenAI 新能力调研](./OpenAI新能力调研.md)：记录值得进入后续架构决策的新能力和边界判断；
+- [ProFlow](./ProFlow/README.md)、[ProFlow-RAG](./ProFlow-RAG/README.md)、[ChatWeb](./ChatWeb/README.md)：从正式知识回到真实项目和证据。
+
+这里不追求“文档越多越完整”。一个主题只有在已经从过程材料中提炼出稳定问题、机制、边界和证据以后，才进入正式知识入口。
