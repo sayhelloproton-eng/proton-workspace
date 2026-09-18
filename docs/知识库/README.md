@@ -168,6 +168,7 @@ ProFlow Runtime / Task / Tool Capability
 项目仓库和运行事实负责回答“现在系统是什么”，正式知识库负责回答“这些实践最终说明了什么”。当前已经形成的主干知识可以从下面进入：
 
 - [现代 AI 工程：从模型智能到长期 Agent 系统](./现代AI工程/README.md)：从 Transformer、RAG、Tool、Agent、Runtime、Multi-Agent 一路讲到 Eval、Platform、小模型与真实岗位，是整套知识的连续学习主线；
+- [AI 业务工程：从“能用 AI”到“把 AI 变成长期业务能力”](./AI业务工程/README.md)：承接现代 AI 工程的底层责任，继续讲场景选择、成本、模型与系统 Eval、生产可观测性、Behavior Release、故障恢复、安全治理、资产化和组织能力飞轮；
 - [Agent 工程复杂度与边界](./Agent工程复杂度与边界.md)：回答什么时候应该升级复杂度，什么时候应该主动降级；
 - [Agent、Skill、Tool、Script 与 Workflow 的职责边界](./Agent-Skill-Tool-Workflow职责边界.md)：回答判断、方法、能力、确定执行和长期状态分别应该由谁负责；
 - [本机 Agent 工具链](./本机Agent工具链.md)：记录 Chat 如何通过本机事实工具、Skill 和自动化进入真实工程环境；
