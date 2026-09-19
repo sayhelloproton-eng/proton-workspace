@@ -8,6 +8,7 @@ KEY="${GPTWEB_MCP_RUNTIME_KEY:-$WORKSPACE_ROOT/tools/codegraph/.secrets/runtime-
 HEALTH_DIR="$HOME/Library/Application Support/tunnel-client/health"
 TUNNEL_ID="tunnel_6a846f4f98108191b1df136b2538a3c4"
 CODEGRAPH_BIN="${CODEGRAPH_BIN:-/Users/agent/.nvm/versions/node/v24.19.0/bin/codegraph}"
+CODEGRAPH_HANDSHAKE_TIMEOUT_MS="${CODEGRAPH_STARTUP_HANDSHAKE_TIMEOUT_MS:-0}"
 
 runtime_ready() {
   local url_file="$HEALTH_DIR/codegraph.url"
@@ -31,7 +32,7 @@ start_service() {
     --profile-dir "$PROFILE_DIR" \
     --tunnel-id "$TUNNEL_ID" \
     --runtime-api-key "file:$KEY" \
-    --mcp-command "$CODEGRAPH_BIN serve --mcp"
+    --mcp-command "/usr/bin/env CODEGRAPH_STARTUP_HANDSHAKE_TIMEOUT_MS=$CODEGRAPH_HANDSHAKE_TIMEOUT_MS $CODEGRAPH_BIN serve --mcp"
 }
 
 stop_service() {

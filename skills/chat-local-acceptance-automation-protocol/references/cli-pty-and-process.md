@@ -20,20 +20,23 @@ If an interactive CLI launches Browser authentication, keep the **same PTY trans
 
 Prefer explicit facts: process exit, readiness/health, port/listener, UI state, event, prompt, file/result appearance, or a log marker.
 
-First ask: **does the next decision depend on this result now?**
-
-If no:
+First ask: **what useful work can be completed before this result becomes the dependency point?**
 
 ```text
 start/bind once
 → record PID/session/log/event authority
-→ continue independent work
-→ do not poll
+→ plan all current eligible work
+→ execute it to exhaustion
+→ replan downstream gate-safe work
+→ only when that work pool is empty: inspect terminal authority
+→ PID/session only if terminal authority cannot decide
 ```
 
-If no independent work remains, return control rather than waiting. If the Chat returns control while work is still asynchronous, close the current Acceptance run truthfully; later continuation opens a new run and reuses the checkpoint/authority.
+Do not inspect PID/status immediately after start. The dependency point is reached only after all relevant, safe, non-dependent work has been exhausted and a proactive replan finds nothing else eligible.
 
-If yes, bounded condition/event waiting is allowed. Even then, do not create a 1–2 second model polling loop or launch a second copy because output is quiet.
+If a permitted readback is still `RUNNING/UNKNOWN`, do not return immediately. Replan the next tranche of current/downstream gate-safe work, execute it, and exhaust the work pool again. A later status read is allowed only after that meaningful intervening work cycle.
+
+Bounded condition/event waiting is allowed only when no eligible work remains and the next decision truly depends on completion. Even then, do not create a 1–2 second model polling loop or launch a second copy because output is quiet.
 
 Timeout is a bounded observation result, not evidence that a larger timeout fixes the problem. Increase budget only when owner/progress evidence proves the same correct operation is legitimately slow.
 
@@ -58,19 +61,21 @@ Partial stdout/stderr survives timeout and remains evidence. Persistent diagnost
 
 ## Long asynchronous work
 
-Acceptance must not babysit build/publish/deploy/install/full-suite or another known-slow producer. When the result is not yet a dependency point, keep only durable identity and continue independent work.
-
-At the dependency point:
+Acceptance must not babysit build/publish/deploy/install/full-suite or another known-slow producer. It also must not abandon useful work merely because an async authority exists.
 
 ```text
-owner/terminal authority first
-→ if satisfied: continue
-→ otherwise PID/session once
-   → alive: RUNNING; continue independent work or return
-   → dead: log/output once; classify
+bind durable authority
+→ plan current eligible work
+→ execute to exhaustion
+→ proactively replan downstream gate-safe work
+→ terminal Owner authority only after exhaustion
+→ PID/session only if terminal authority is unresolved
+→ alive/RUNNING: mandatory replan + more useful work
+→ another status read only after meaningful intervening work
+→ return only after exhaustive replanning finds no eligible work
 ```
 
-Non-idempotent `UNKNOWN` requires durable effect reconciliation before retry.
+Two status reads with no real `replan → meaningful work → work-pool exhaustion` cycle between them are polling and forbidden. Non-idempotent `UNKNOWN` requires durable effect reconciliation before retry.
 
 ## Final lifecycle fixture hygiene
 

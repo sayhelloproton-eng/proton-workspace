@@ -125,6 +125,7 @@ High-value defaults:
 - no per-file/hunk mutation loops;
 - no blind retry;
 - no model polling just to learn “still running”;
+- compress repeated deterministic control-plane sequences into one helper transaction whenever no model judgment is needed between steps;
 - use existing deterministic scripts/automation instead of rebuilding mechanics in Chat;
 - timing/telemetry must reuse naturally available evidence and must not create extra work.
 
@@ -137,14 +138,28 @@ For build, install, deploy, publish, Full Suite, or any known-slow task:
 ```text
 START ONCE
 → record PID/session/log + terminal authority
-→ continue every independent task immediately
-→ check only at the dependency point
-→ terminal authority first
-→ PID/session once only if still unresolved
-→ log once only if dead
+→ plan the current eligible mainline work pool
+→ execute that pool to exhaustion
+→ proactively replan downstream gate-safe work
+→ only when no eligible work remains: inspect terminal authority
+→ inspect PID/session only if terminal authority cannot close the result
+→ if still RUNNING/UNKNOWN: treat that as a mandatory REPLAN trigger
+→ execute every newly eligible task to exhaustion
+→ return control only after exhaustive replanning proves no safe relevant work remains
 ```
 
-Do not synchronously hold Chat open merely waiting. If no independent work remains, return control instead of polling. npm publish/release is always detached/non-blocking; exact Registry version is the publication authority. Timeout/UNKNOWN never authorizes a duplicate non-idempotent action.
+**ASYNC CONTINUATION BARRIER.** A task becomes `ASYNC_BOUND` when it is known-slow **or** its first Local call returns a live PID/session with `running/timeout` instead of a terminal result. After that boundary:
+- do **not** directly inspect the PID/session/status just because the async task started; first execute all currently known mainline-relevant work that does not depend on the async result, does not cross the current Stage/Gate, and is safe under the current owner/authority;
+- after the current work pool is exhausted, Chat must **replan forward** for additional downstream preparation, evidence, bookkeeping, adoption/recovery preparation, or other gate-safe work that can be completed without the async result;
+- only when both the current work pool and that proactive replan produce no eligible work may Chat inspect the terminal Owner authority; PID/session is a fallback only when terminal authority cannot decide;
+- a `RUNNING` / unresolved readback is **not** a return condition. It is a mandatory signal to plan another round of eligible work and execute it before considering another status readback;
+- there is no fixed “one PID readback per turn” rule. Instead, every additional readback for the same authority requires a real intervening cycle of **replan → meaningful mainline work → work-pool exhaustion**. Two status reads with no meaningful work between them are polling and are forbidden;
+- return control is allowed only after the post-readback replan also finds no new eligible work and every remaining meaningful action either depends on the async terminal result or would cross the current Stage/Gate;
+- do not invent unrelated busywork, speculative refactors, or premature next-Gate actions merely to stay active;
+- never follow one unresolved readback with a probe chain such as `read_process_output → list_sessions → ps/status/health/log` just to wait;
+- the next user continuation resumes from the recorded authority; it must not restart the work.
+
+Do not synchronously hold Chat open merely waiting. The objective is not to “stay busy”; it is to **exhaust all safe, relevant, gate-correct work before returning control**. npm publish/release is always detached/non-blocking; exact Registry version is the publication authority. Timeout/UNKNOWN never authorizes a duplicate non-idempotent action.
 
 Details: `references/tests-and-long-tasks.md`.
 
@@ -189,6 +204,6 @@ Learning is evidence-driven: one-off incidents stay telemetry; repeated/causally
 
 ## Core principle
 
-**先看现实，找对 Owner，一次做完整阶段；机械动作自动化，长任务不阻塞；测试、Acceptance、发布只在阶段 Gate 做。**
+**先看现实，找对 Owner，一次做完整阶段；异步任务先把当前和后续所有可安全推进的主线工作做尽，再看终态；若仍未完成就重新规划并继续，只有所有可能任务都耗尽后才返回控制权；测试、Acceptance、发布只在阶段 Gate 做。**
 
 References: `references/tools-and-context.md`, `references/tests-and-long-tasks.md`, `references/metrics-and-antipatterns.md`, `references/execution-policy.yaml`, `references/validation-evidence.md`, `references/dual-environment.md`, `references/project-instructions-v3.md`.

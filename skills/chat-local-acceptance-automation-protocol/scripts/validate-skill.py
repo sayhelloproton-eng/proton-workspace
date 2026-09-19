@@ -88,7 +88,7 @@ def main() -> None:
 
     validate_frontmatter(root)
 
-    baseline = run([sys.executable, str(root / "scripts/validate-baseline.py")], root, env, timeout=90)
+    baseline = run([sys.executable, str(root / "scripts/validate-baseline.py")], root, env, timeout=600)
     if baseline.returncode != 0:
         fail("acceptance baseline failed", baseline.stdout + baseline.stderr)
     print(baseline.stdout.strip())

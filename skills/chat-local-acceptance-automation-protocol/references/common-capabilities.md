@@ -64,15 +64,20 @@ A proven product defect means: checkpoint → Engineering Repair Stage → Engin
 
 ## Async rule
 
-**Wait for facts, not time.** If the next decision does not depend on the async result, do not wait:
+**Wait for facts, not time; work before status.** Starting an async operation does not authorize an immediate PID/status check.
 
 ```text
 start/bind authority once
-→ continue independent work
-→ inspect only at dependency point
+→ plan current eligible work
+→ execute to exhaustion
+→ proactively replan downstream gate-safe work
+→ only when the work pool remains empty: inspect terminal authority
+→ PID/session only if terminal authority cannot decide
+→ RUNNING/UNKNOWN: mandatory replan + more meaningful work
+→ return only after exhaustive replanning finds no safe relevant work
 ```
 
-If the result is the dependency point, bounded condition/event waiting is allowed. Never create a model-managed “still running?” loop.
+If the result is still unresolved after a permitted readback, that readback is a **replan trigger**, not a return trigger. Any later readback for the same authority requires an intervening meaningful work cycle; never create a model-managed “still running?” loop. Bounded condition/event waiting is allowed only when all eligible work has been exhausted and the next decision truly depends on that fact.
 
 ## Acceptance mode routing
 

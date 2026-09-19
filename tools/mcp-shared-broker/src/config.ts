@@ -3,18 +3,8 @@ import path from "node:path";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 const DEFAULT_CONNECT_TIMEOUT_MS = 20_000;
 const MAX_CONNECT_TIMEOUT_MS = 60_000;
-const DEFAULT_AUTHORITY_LEASE_TTL_MS = 18_000_000;
-const MIN_AUTHORITY_LEASE_TTL_MS = 60_000;
-const MAX_AUTHORITY_LEASE_TTL_MS = 86_400_000;
 
 export type BrokerUpstreamTransport = "stdio" | "streamable-http";
-
-export interface BrokerAuthorityConfiguration {
-  readonly controllerTokenFile: string;
-  readonly stateFile: string;
-  readonly readOnlyTools: readonly string[];
-  readonly leaseTtlMs: number;
-}
 
 export interface BrokerConfiguration {
   readonly brokerId: string;
@@ -32,7 +22,6 @@ export interface BrokerConfiguration {
     url?: string;
     cwd?: string;
   }>;
-  readonly authority?: BrokerAuthorityConfiguration;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -132,66 +121,6 @@ function parseEnvPassthrough(
   return Object.freeze(resolved);
 }
 
-function parseAuthority(
-  environment: Readonly<Record<string, string | undefined>>,
-): BrokerAuthorityConfiguration | undefined {
-  const tokenFile = environment.MCP_BROKER_AUTHORITY_CONTROLLER_TOKEN_FILE?.trim();
-  const stateFile = environment.MCP_BROKER_AUTHORITY_STATE_FILE?.trim();
-  const toolsRaw = environment.MCP_BROKER_AUTHORITY_READ_ONLY_TOOLS_JSON?.trim();
-  const oldToolsRaw = environment.MCP_BROKER_AUTHORITY_EFFECTFUL_TOOLS_JSON?.trim();
-  if (oldToolsRaw) {
-    throw new Error(
-      "MCP_BROKER_AUTHORITY_EFFECTFUL_TOOLS_JSON is authority v1 configuration; use MCP_BROKER_AUTHORITY_READ_ONLY_TOOLS_JSON for v2.",
-    );
-  }
-  if (!tokenFile && !stateFile && !toolsRaw) return undefined;
-  if (!tokenFile || !stateFile || !toolsRaw) {
-    throw new Error(
-      "MCP_BROKER_AUTHORITY_CONTROLLER_TOKEN_FILE, MCP_BROKER_AUTHORITY_STATE_FILE, and MCP_BROKER_AUTHORITY_READ_ONLY_TOOLS_JSON must be configured together.",
-    );
-  }
-  if (!path.isAbsolute(tokenFile)) {
-    throw new Error("MCP_BROKER_AUTHORITY_CONTROLLER_TOKEN_FILE must be an absolute path.");
-  }
-  if (!path.isAbsolute(stateFile)) {
-    throw new Error("MCP_BROKER_AUTHORITY_STATE_FILE must be an absolute path.");
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(toolsRaw);
-  } catch (cause) {
-    throw new Error("MCP_BROKER_AUTHORITY_READ_ONLY_TOOLS_JSON must be valid JSON.", { cause });
-  }
-  if (
-    !Array.isArray(parsed) ||
-    parsed.length === 0 ||
-    parsed.some((item) => typeof item !== "string" || item.trim() === "")
-  ) {
-    throw new Error("MCP_BROKER_AUTHORITY_READ_ONLY_TOOLS_JSON must be a non-empty JSON string array.");
-  }
-  const readOnlyTools = parsed.map((item) => String(item).trim());
-  if (new Set(readOnlyTools).size !== readOnlyTools.length) {
-    throw new Error("MCP_BROKER_AUTHORITY_READ_ONLY_TOOLS_JSON must contain unique tool names.");
-  }
-  const ttlRaw = environment.MCP_BROKER_AUTHORITY_LEASE_TTL_MS?.trim();
-  const leaseTtlMs = ttlRaw ? Number(ttlRaw) : DEFAULT_AUTHORITY_LEASE_TTL_MS;
-  if (
-    !Number.isInteger(leaseTtlMs) ||
-    leaseTtlMs < MIN_AUTHORITY_LEASE_TTL_MS ||
-    leaseTtlMs > MAX_AUTHORITY_LEASE_TTL_MS
-  ) {
-    throw new Error(
-      `MCP_BROKER_AUTHORITY_LEASE_TTL_MS must be an integer from ${MIN_AUTHORITY_LEASE_TTL_MS} to ${MAX_AUTHORITY_LEASE_TTL_MS}.`,
-    );
-  }
-  return Object.freeze({
-    controllerTokenFile: tokenFile,
-    stateFile,
-    readOnlyTools: Object.freeze(readOnlyTools),
-    leaseTtlMs,
-  });
-}
-
 export function resolveBrokerConfiguration(
   environment: Readonly<Record<string, string | undefined>> = process.env,
 ): BrokerConfiguration {
@@ -210,7 +139,6 @@ export function resolveBrokerConfiguration(
     environment.MCP_BROKER_UPSTREAM_ENV_PASSTHROUGH,
     environment,
   );
-  const authority = parseAuthority(environment);
   return Object.freeze({
     brokerId,
     host,
@@ -227,6 +155,5 @@ export function resolveBrokerConfiguration(
       ...(upstreamUrl ? { url: upstreamUrl } : {}),
       ...(cwd ? { cwd } : {}),
     }),
-    ...(authority ? { authority } : {}),
   });
 }

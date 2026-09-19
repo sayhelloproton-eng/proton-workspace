@@ -23,6 +23,7 @@ legacy_profile_conflicts() {
     path="$LEGACY_PROFILE_DIR/$service.yaml"
     [[ -e "$path" ]] && print -r -- "$path"
   done
+  return 0
 }
 
 assert_no_legacy_profiles() {

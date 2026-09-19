@@ -1,6 +1,6 @@
 ---
 name: technical-document-writing
-description: Write or rewrite one technical document around a real reader task, verified facts, evidence, mechanisms, trade-offs, sufficient information depth and varied forms that reduce understanding cost. Use for project explanations, architecture explanations, technical articles, README-style narratives, engineering knowledge and other documents that need to be understandable and defensible. Do not classify documents into governance types, build dependency graphs, manage registries/lifecycle, publish externally, or invent unsupported facts.
+description: Write or rewrite one technical document around a real reader task, verified facts, evidence, mechanisms, trade-offs, sufficient information depth and a reader mental model that reduces understanding cost. Use for project explanations, architecture explanations, technical articles, README-style narratives, engineering knowledge and other documents that need to be understandable and defensible. Do not classify documents into governance types, build dependency graphs, manage registries/lifecycle, publish externally, or invent unsupported facts.
 ---
 
 # Technical Document Writing
@@ -9,7 +9,49 @@ description: Write or rewrite one technical document around a real reader task, 
 
 给定真实材料和一个明确读者，怎样把**这一篇**技术文档写得清楚、完整、可信，而且经得住追问？
 
-本 Skill 只负责一篇文档本身。它不建立文档分类体系，不要求 ADR / PRD / Architecture 等固定类型，不建立稳定 ID、Registry、Document Bundle、生命周期或文档依赖图。结构只服从读者任务、事实关系和文章要回答的问题。
+本 Skill 只负责一篇文档本身。它不建立文档分类体系，不要求 ADR / PRD / Architecture 等固定类型，不建立稳定 ID、Registry、Document Bundle、生命周期或文档依赖图。结构只服从读者任务、读者心智、事实关系和文章要回答的问题。
+
+## Reader mental model — HARD RULE
+
+技术文档不是作者把知识倒给读者，而是读者带着自己的**信息需求**进入文档，用有限时间判断“这里有没有我要的答案、值不值得继续读”，再逐步把新信息接到自己已有的认知上。
+
+写作时默认采用下面这条通用读者循环：
+
+```text
+我现在要解决 / 判断什么？
+→ 这篇是不是和我有关？
+→ 看起来能不能较快得到答案？
+→ 扫描标题、段首、图表、代码和关键词找入口
+→ 选择值得细读的部分
+→ 把新概念挂到已有认知上
+→ 形成更完整的关系和机制模型
+→ 用证据、例子、边界校准可信度
+→ 得到答案、产生下一个问题，或停止阅读
+```
+
+固定规则：
+
+1. **读者以自己的任务为中心，不以作者的目录为中心。** 他通常不是来“完整学习这个系统”，而是带着一个问题、决策、操作目标或评估目标进入。章节顺序应优先服从读者问题展开，而不是源码模块、组织架构、作者研究顺序或术语分类。
+2. **第一道门是相关性和预期收益。** 标题、开头和主要章节必须尽快给出足够的 `Information Scent（信息气味：让读者预判这里是否有自己需要的信息）`。读者看不出“这和我有什么关系 / 能得到什么”，不会因为后文很完整就自动继续读。
+3. **默认读者先扫描，再选择性细读。** 标题、段首、表头、图注、代码块和强调内容是阅读入口。即使读者只扫描 H1/H2 和每节第一段，也应该得到一张不失真的粗粒度地图。不要把真正的结论埋在长段最后。
+4. **读者持续做认知成本判断。** 每个陌生术语、隐含前置知识、绕远的铺垫、重复段落都会增加继续阅读的成本。简化不是一味删内容，而是让每一段提供足够价值来支付它要求读者付出的注意力。
+5. **新知识必须接到已有认知上。** 先给读者一个可识别的问题、场景、旧方案、熟悉概念或直观关系，再引入新的抽象。不要先要求读者记住一组名词，再承诺后面会解释它们为什么重要。
+6. **理解是逐层建立的，不是一次灌满的。** 正常认知路径优先是 `问题 → 关系 → 机制 → 证据 → 边界`。浅层阅读先获得方向和主结论；继续深入时再补状态、接口、算法、失败路径和实现证据。后面的细节应细化前面的模型，而不是推翻前面的说法。
+7. **每一节都要接住读者的“下一个自然问题”。** 当前段回答完以后，读者最可能问什么？下一节应尽量沿这个问题继续，而不是突然切到作者想展示的另一个模块。文章主线本质上是一条合理的 question chain（问题链）。
+8. **可信度是阅读心智的一部分。** 读者会区分“作者声称如此”和“已经有事实证明如此”。重要判断附近应出现证据、例子、失败条件、事实强度或当前边界，让读者能校准自己应该相信到什么程度。
+9. **允许选择性退出。** 技术文章不应强迫所有读者读到底才获得价值。开头可以满足只需方向的人，中层满足需要机制的人，深层满足需要验证、实现或追问的人。不同深度共享同一真实模型，只是分辨率不同。
+10. **具体读者角色只是通用模型的参数。** 学习者、使用者、开发者、维护者、评审者、决策者、招聘方或面试官的“信息需求”不同，但都遵循上面的进入、扫描、理解、验证和退出过程。招聘评估只是一个应用场景，不能把整个技术写作 Skill 固定成求职叙事。
+
+内部设计文章时，可以先写四行工作句，不一定出现在成稿里：
+
+```text
+ENTRY QUESTION：读者为什么现在会打开这篇？
+PRIOR MODEL：他已经知道什么，又最可能误解什么？
+READER OUTCOME：读完后他应该能理解、判断或完成什么？
+NEXT QUESTIONS：获得第一层答案后，他最可能继续追问什么？
+```
+
+这四行比“准备写几个章节”更早。只有读者心智和目标明确以后，才开始设计目录。
 
 ## When to use
 
@@ -25,15 +67,32 @@ description: Write or rewrite one technical document around a real reader task, 
 
 ## Minimum inputs
 
-开始前只需要确认五件事：
+开始前只需要确认六件事：
 
-1. **读者**：谁会读？他为什么点开？
-2. **读者任务**：读完以后，他要理解、判断或执行什么？
-3. **核心问题**：这篇文章主要回答哪一个问题？
-4. **事实与证据**：哪些已经验证，哪些仍是推断、计划或未知？
-5. **边界**：哪些内容不属于本文，哪些缺口目前无法关闭？
+1. **读者**：谁会读？他处在什么角色和场景？
+2. **进入问题**：他为什么会在这个时刻打开这篇？正在解决、理解、判断或评估什么？
+3. **已有认知**：他大概率已经知道什么？哪些术语、背景和关系不能默认知道？
+4. **读者结果**：读完以后，他要理解、判断或执行什么？
+5. **事实与证据**：哪些已经验证，哪些仍是推断、计划或未知？
+6. **边界**：哪些内容不属于本文，哪些缺口目前无法关闭？
 
 信息不完整可以写，但不允许把未知写成已知，把目标设计写成当前实现。
+
+## Professional terminology — HARD RULE
+
+中文技术文档不能要求读者先记住一组术语，才能继续理解正文。专业术语可以保留，但**第一次作为概念进入正文时必须就地解释**。
+
+固定规则：
+
+1. 英文术语、英文缩写、中文专业词第一次作为正文概念出现时，必须使用 `专业术语（中文释义）` 的形式。例：`DDD（领域驱动设计）`、`Fact Owner（事实归属方：某类事实唯一可信来源）`、`Reality Reconciliation（真实结果核对：结果不确定时回到现实世界确认实际状态）`。
+2. 中文释义必须解释这个术语在当前文章或项目里的实际含义，不能只做字面翻译。必要时用一个短分句补充“它具体负责什么 / 什么时候使用”。
+3. 首次解释以后，正文优先使用更低心智负担的中文表达；只有需要保持标准名称、代码身份或行业辨识度时，才继续使用英文/缩写。
+4. 禁止在一个句子或紧邻段落里连续堆叠多个未解释专业术语。如果同一处必须引入多个新概念，应拆句、拆段，或先解释一个再引入下一个。
+5. 代码标识、状态枚举、命令、配置键、协议字段、产品名必须保持真实拼写，不能为了中文化修改其技术身份；但它们第一次进入正常叙述时，仍应在旁边说明中文含义。代码块中的原始内容不强行翻译。
+6. 不允许在文章开头堆一整页术语表来规避“首次出现就解释”。定义应出现在读者第一次真正需要这个概念的位置。
+7. 如果一个专业词本身就是中文但对目标读者仍有明显理解门槛，同样需要括号释义，例如：`幂等（同一个请求重复提交也不会产生第二份业务结果）`。
+
+目标不是消灭术语，而是让读者在第一次遇到术语时就获得足够语义，不需要停下来查词或依赖隐藏上下文。
 
 ## Workflow
 
@@ -41,19 +100,36 @@ description: Write or rewrite one technical document around a real reader task, 
 
 先确认支撑正文的事实。描述本地系统时优先核对当前源码、测试、CLI、运行结果或其他直接证据；描述外部产品、标准和 API 时优先使用当前的一手资料。详细规则见 `references/02-evidence-and-verification.md`。
 
-### 2. Freeze the reader outcome
+### 2. Model the reader before the outline
 
-先写一句内部工作句：**“读完以后，这个读者应该能判断 / 理解 / 完成什么？”**
+先冻结 `ENTRY QUESTION / PRIOR MODEL / READER OUTCOME / NEXT QUESTIONS`。不要先从现有模块、文件名或术语清单生成目录，再尝试把读者塞进去。
 
-如果这句话说不清，先不要列章节。标题不是信息架构的起点，读者任务才是。
+如果面对多个读者角色，找出共同的第一层认知，再允许不同角色从中层开始分叉。不要为了覆盖所有人，把每一层都写成对所有人同样详细。
 
-### 3. Build the argument, not a template
+### 3. Build the question chain
+
+先列出读者为了完成目标必须依次解决的几个自然问题，再决定章节。一个常见但不强制的认知顺序是：
+
+```text
+这是什么 / 为什么和我有关？
+→ 真正的问题或约束是什么？
+→ 它和我已经知道的东西是什么关系？
+→ 机制怎样工作？
+→ 为什么这么设计，而不是别的方案？
+→ 有什么证据说明它成立？
+→ 失败、例外和当前边界在哪里？
+→ 如果我要继续深入，下一步看什么？
+```
+
+文章不必逐项生成这些标题；它们用于检查章节顺序是不是符合读者思路。
+
+### 4. Build the argument, not a template
 
 根据真实信息关系组织文章。常见关系包括：问题与约束、因果、机制、状态变化、比较、演进、流程、权衡和证据链。可以组合，但不要机械生成“背景 / 目标 / 设计 / 实现 / 总结”。
 
-重要结论、当前状态和适用范围应尽早出现；细节再逐层展开。详细原则见 `references/01-writing-principles.md`。
+重要结论、当前状态和适用范围应尽早出现；细节再逐层展开。章节名优先表达读者关心的问题、变化、结果或关系；只有目标读者本来就用某个内部模块名思考时，才让内部模块名直接承担一级信息架构。详细原则见 `references/01-writing-principles.md`。
 
-### 4. Write claim and evidence together
+### 5. Write claim and evidence together
 
 每个重要技术判断都要么：
 
@@ -63,19 +139,19 @@ description: Write or rewrite one technical document around a real reader task, 
 
 不要把所有来源堆到文末，让读者自己猜哪条来源支撑哪句话。
 
-### 5. Explain the mechanism
+### 6. Explain the mechanism
 
 不要停在“做了什么”。尽量把责任、输入输出、状态变化、控制边界、失败路径和为什么这样设计写出来。
 
 尤其避免只有结果没有机制的句子，例如“提升了可靠性”“完成了治理”“支持了自动化”。读者应该能继续追问：**谁做的、怎么做的、在哪个边界生效、失败时发生什么？**
 
-### 6. Build information depth before compression
+### 7. Build information depth before compression
 
 **丰富不是字多，而是信息维度足够。** 在材料允许的情况下，正式知识文章应尽量覆盖与核心问题真正相关的多个维度，例如：背景 / 问题、真实场景、核心判断、机制、关键技术细节、例子、失败或边界、证据 / 结果、演进与进一步思考。
 
 这些维度不是固定章节模板，也不要求每篇文章全部出现。没有事实支撑的维度宁可缺省；已有真实材料则不要为了“简洁”把正文压成几个结论、几个 bullet 或一段摘要。先保住能支撑理解和追问的信息，再删除重复和空话。
 
-### 7. Use varied forms when they reduce understanding cost
+### 8. Use varied forms when they reduce understanding cost
 
 内容形状应跟随信息关系，而不是全文只用一种形式。正常段落负责因果和论证；表格负责精确比较与映射；真实代码、命令、配置、Schema 和输入输出承担实现说明或证据；图负责关系、流程和状态。
 
@@ -83,19 +159,24 @@ description: Write or rewrite one technical document around a real reader task, 
 
 不要求每篇文章强制有图，也不能为了“形式丰富”堆装饰。判断标准是：换一种形式后，读者是否能更快、更准确地理解同一事实关系。
 
-### 8. Review from the reader's next question
+### 9. Review from the reader's next question
 
-完成初稿后，不是问“像不像正式文档”，而是问：
+完成初稿后，不是问“像不像正式文档”，而是从读者循环重新走一遍：
 
+- 标题和开头有没有足够信息气味，让目标读者快速知道“这是不是我要的”？
+- 只扫描 H1/H2、段首、图表时，得到的粗粒度模型是否仍然正确？
+- 章节顺序是在回答读者的自然问题，还是在复刻作者的模块目录？
+- 新概念有没有先接到读者已有认知，再进入更深抽象？
 - 哪里会让读者误解当前状态？
 - 哪里只有结论，没有证据或机制？
-- 哪个术语出现时还没有足够上下文？
-- 哪段可以删掉而不损失任何判断信息？
-- 一个不了解隐藏上下文的技术读者接下来最可能追问什么？正文有没有真实入口可以继续深入？
+- 哪个术语第一次出现时还没有按 `专业术语（中文释义）` 就地解释？
+- 是否存在连续堆叠多个未解释专业术语、迫使读者先查词再继续阅读的段落？
+- 哪段要求读者付出明显认知成本，却没有增加新的判断信息？
+- 一个不了解隐藏上下文的读者接下来最可能追问什么？正文有没有真实入口可以继续深入？
 
 使用 `references/03-review-checklist.md` 做最终检查。
 
-### 9. Polish last
+### 10. Polish last
 
 结构和事实通过后，再做语言层面的自然化、压缩和节奏调整。中文文章需要时调用 `chinese-technical-writing-naturalizer`，但润色不得改变事实强度和技术边界。
 
@@ -103,16 +184,24 @@ description: Write or rewrite one technical document around a real reader task, 
 
 一篇完成的技术文档至少满足：
 
-- 读者不用猜文章为什么存在；
-- 主线能解释章节为什么按这个顺序出现；
+- 读者不用猜文章为什么存在、与自己的任务有什么关系；
+- 标题、开头和主要章节提供足够信息气味，读者能快速判断是否值得继续；
+- 只做扫描式阅读时也能获得不失真的粗粒度模型，深入阅读只是增加分辨率；
+- 主线按读者问题和事实关系展开，而不是机械复刻源码模块、组织结构或作者研究顺序；
+- 新概念能接到目标读者已有认知，不要求先背一组术语才进入主题；
+- 主线能解释章节为什么按这个顺序出现，并能自然接住读者的下一个问题；
 - 当前实现、目标、计划、推断和建议没有混写；
 - 重要结论能回到证据，或者明确暴露证据缺口；
 - 机制和边界足以支撑技术追问，而不只是给出漂亮结论；
+- 所有专业术语首次作为正文概念出现时，都已经用 `专业术语（中文释义）` 就地解释；
+- 不存在连续堆叠多个未解释专业术语的正文；代码标识、枚举和命令保持真实拼写；
 - 材料足够时包含多个真实信息维度，而不是只剩结论、摘要和 bullet；
 - 段落、表格、代码 / 命令、文本图和图片按信息关系选择，形式丰富但不装饰化；
 - 标题和格式帮助扫描，不代替正常解释；
+- 不强迫所有读者读到底才获得第一层价值，也不因浅层友好而牺牲深层证据；
 - 没有为了“完整”机械添加空章节；
-- 文档脱离另一套 Registry、关系图或隐藏上下文仍能独立读懂。
+- 文档脱离另一套 Registry、关系图或隐藏上下文仍能独立读懂；
+- 招聘、面试、评审、教学等具体场景只改变读者任务和关注点，不把通用写作方法绑死在某一种场景。
 
 ## Environment boundary
 

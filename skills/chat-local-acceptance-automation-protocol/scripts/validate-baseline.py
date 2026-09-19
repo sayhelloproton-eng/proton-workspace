@@ -12,6 +12,9 @@ def require(text: str, token: str, owner: str) -> None:
     if token not in text:
         fail(f"missing {token!r} in {owner}")
 
+def run(args: list[str], cwd: Path, env: dict[str, str], timeout: int) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=True, timeout=timeout, check=False)
+
 def run_logger(root: Path, record: dict, ledger: Path) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy(); env["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run([sys.executable, str(root / "scripts/append-run-log.py"), "--input", "-", "--ledger", str(ledger)], input=json.dumps(record), text=True, capture_output=True, env=env, timeout=20, check=False)
@@ -45,7 +48,7 @@ def main() -> None:
         "references/common-capabilities.md", "references/browser-and-system-ui.md", "references/cli-pty-and-process.md",
         "references/tool-runtime-and-auth.md", "references/validation-baseline.md", "references/lost-context-regression.md",
         "references/run-logging.md", "references/skill-evolution.md", "references/project-instructions.md",
-        "scripts/append-run-log.py", "scripts/validate-baseline.py", "scripts/validate-skill.py",
+        "scripts/append-run-log.py", "scripts/browser-run-boundary.py", "scripts/validate-baseline.py", "scripts/validate-skill.py",
     ]
     for relative in required:
         if not (root / relative).is_file(): fail(f"missing required file: {relative}")
@@ -62,15 +65,19 @@ def main() -> None:
         "SINGLE-AUTOMATION-SOURCE-OF-TRUTH", "EYES-FIRST", "SEE-BEFORE-CONTROL-RECOVERY", "REUSE-EXISTING-BROWSER-CONNECTION",
         "SHARED-BROWSER-USAGE-GUARD", "IDENTIFY-BEFORE-MUTATE", "KNOWN-PATH-FIRST", "FIRST-DIVERGENCE-BEFORE-FALLBACK",
         "USER-PATH-INTEGRITY", "ACCEPTANCE-LEVEL-AWARE", "CHECKPOINT-AFTER-PROOF", "FAILURE-CLASSIFY-BEFORE-REPAIR",
-        "SIDE-EFFECT-RECONCILIATION", "MINIMUM-SUFFICIENT-PROOF", "CONTINUE-EXISTING-BEFORE-RESTART", "RUN-BOUNDARY-FIRST",
+        "SIDE-EFFECT-RECONCILIATION", "MINIMUM-SUFFICIENT-PROOF", "CONTINUE-EXISTING-BEFORE-RESTART", "ASYNC-CONTINUATION-BARRIER", "RUN-BOUNDARY-FIRST",
         "RETURN-CONTROL-CLOSES-RUN", "HARNESS-VALID-BEFORE-SCORING", "EVIDENCE-GOVERNED-EVOLUTION",
         "DETERMINISTIC-MECHANICS-BELOW-MODEL", "REALITY-IS-ACCEPTANCE-NOT-THE-MAIN-DEBUGGER",
     ]:
         require(skill, rule, "SKILL.md")
     for token in ["## Execution priority — HARD RULE", "Acceptance is a **proof gate, not the main debugger**", "## Stage boundary — HARD RULE", "## Long asynchronous work — HARD RULE"]:
         require(skill, token, "SKILL.md")
+    for token in ["work pool", "mandatory replan", "every additional readback"]:
+        require(skill, token, "SKILL.md")
 
     for token in ["Observation is read-only by default", "Uncertain mutation requires reconciliation", "## Stage boundary", "## Async rule"]:
+        require(common, token, "common-capabilities.md")
+    for token in ["work before status", "mandatory replan", "intervening meaningful work cycle"]:
         require(common, token, "common-capabilities.md")
     if "## Script promotion rule" in common: fail("script promotion has duplicate semantic owner in common-capabilities.md")
     require(browser, "`SEE` is observation, not a hidden mutation channel", "browser-and-system-ui.md")
@@ -90,10 +97,11 @@ def main() -> None:
     for token in ["## MAINLINE-FIRST", "OBSERVE → CLASSIFY → PLACE → PROMOTE → MUTATE → VALIDATE → LEARN", "## Information-preserving simplification", "MOVED_TO_CANONICAL_OWNER", "## Script promotion gate — SOLE OWNER", "references/projects/<project>.md", "PROJECT_REFERENCE_UPDATE", "REMOVE_OR_MERGE_EXISTING_GUIDANCE", "8 completed comparable runs", "scripts/validate-skill.py"]:
         require(evolution, token, "skill-evolution.md")
     for token in [".runs/", "__pycache__/", "*.py[cod]"]: require(ignore, token, ".gitignore")
-    for token in ["CONTEXT_KNOWLEDGE_MIGRATION_GAP", "sideEffectState", "embedded secret-like values", "AUTOMATION_START", "TERMINAL_RUN_LOG_MISSED", "freshEvidenceWindowBound", ".runs/tmp/<runId>/", ".runs/artifacts/<runId>/"]:
+    for token in ["CONTEXT_KNOWLEDGE_MIGRATION_GAP", "sideEffectState", "embedded secret-like values", "AUTOMATION_START", "TERMINAL_RUN_LOG_MISSED", "freshEvidenceWindowBound", ".runs/tmp/<runId>/", ".runs/artifacts/<runId>/", "browser-run-boundary.py"]:
         require(logging, token, "run-logging.md")
     cli = text["references/cli-pty-and-process.md"]
-    for token in ["LISTEN — fresh evidence only", "runtime", "log cursor/offset", "dependency-point only"]: require(cli, token, "cli-pty-and-process.md")
+    for token in ["LISTEN — fresh evidence only", "runtime", "log cursor/offset", "dependency-point only", "work pool", "mandatory replan", "meaningful intervening work"]:
+        require(cli, token, "cli-pty-and-process.md")
     check_text_hygiene(root)
 
     start = {"eventType": "AUTOMATION_START", "runId": "baseline-valid", "neededCapabilities": ["LISTEN", "VERIFY"], "freshEvidenceWindowBound": True, "acceptanceMode": "DIRECT"}
@@ -116,6 +124,12 @@ def main() -> None:
     secret_value = "PLAYWRIGHT_MCP_EXTENSION_" + "TOKEN=dummy-not-a-real-secret"
     expect(root, {**negative, "note": secret_value}, False, "secret-value")
     expect(root, {**negative, "failureClass": "CONTEXT_KNOWLEDGE_MIGRATION_GAP"}, True, "context-gap-class")
+
+    boundary_env = os.environ.copy(); boundary_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    boundary = run([sys.executable, str(root / "scripts/browser-run-boundary.py"), "self-test"], root, boundary_env, timeout=180)
+    if boundary.returncode != 0:
+        fail("browser run boundary self-test failed", boundary.stdout + boundary.stderr)
+    print(boundary.stdout.strip())
 
     public_core = skill + common + browser + runtime + validation + evolution
     for forbidden in ["Real-3", "@tomflow", "platform start", "ProFlow Tasks"]:

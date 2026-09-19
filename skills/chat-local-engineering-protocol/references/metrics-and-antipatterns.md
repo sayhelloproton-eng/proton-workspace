@@ -52,9 +52,42 @@ complete implementation stage
 
 ### 5. Long-task / recovery waste — HIGH SEVERITY
 
-启动 known-slow build/publish/deploy/install/full-suite 后持续 `read_process_output` / `ps` / health / Registry polling；Tool timeout 后启动第二份；终态未知先删 evidence；session 丢失后重复已经 PASS 的 verification。
+三类行为都算失败：
 
-正确顺序：`terminal authority → PID/session once → log once if dead`。Frozen runner 先读 durable receipt。目标：`KNOWN_SLOW_DETACHED_SAME_TURN_POLLS = 0`。
+1. **过早查 PID/状态。** known-slow build/publish/deploy/install/full-suite 一启动，就立刻 `read_process_output` / `list_sessions` / `ps` / health / Registry query，尚未把当前可做主线工作和后续 gate-safe 准备做完。
+2. **RUNNING 后不再规划。** 第一次终态/PID readback 仍为 `RUNNING/UNKNOWN`，却直接返回用户，或者继续查状态，而没有重新规划并执行新的后续可做任务。
+3. **状态探针链。** 两次状态 readback 之间没有真实的 `replan → meaningful mainline work → work-pool exhaustion`，只是换成 `ps/status/health/log` 等不同探针反复确认“还活着吗”。
+
+另一端同样禁止为了不返回而制造无关 busywork、扩 scope、提前跨 Gate 或做 speculative refactor。
+
+`ASYNC_BOUND` 后正确顺序：
+
+```text
+plan current eligible mainline work
+→ execute to exhaustion
+→ proactively replan downstream gate-safe work
+→ execute newly eligible work
+→ only when the work pool remains empty: terminal authority
+→ PID/session only if terminal authority cannot close
+→ RUNNING/UNKNOWN: mandatory replan, then more meaningful work
+→ another status read only after a real intervening work cycle
+→ return only after exhaustive replanning finds no safe relevant work
+```
+
+目标：
+- `ASYNC_PID_OR_STATUS_CHECK_BEFORE_WORK_EXHAUSTION = 0`；
+- `ASYNC_RUNNING_READBACK_WITHOUT_REPLAN = 0`；
+- `ASYNC_STATUS_RECHECK_WITHOUT_INTERVENING_WORK_CYCLE = 0`；
+- `ASYNC_EARLY_RETURN_WITH_ELIGIBLE_WORK = 0`；
+- `LONG_TASK_CHAT_BLOCKING = 0`。
+
+### 5b. Deterministic control-plane fragmentation — HIGH SEVERITY
+
+当多个稳定步骤之间不需要模型判断时，仍由 Chat 拆成多次 Tool/MCP 往返，例如 `run start → lease → action → terminal → release → open-check`，会把很短的本机机械工作放大成明显用户墙钟。
+
+正确做法：重复且稳定的无判断序列进入 Skill `scripts/` 或 workspace `automation/`，Chat 一次提交一个 deterministic transaction，只消费最终 receipt。已有 helper 时继续手工拆步骤计为 `CONTROL_PLANE_FRAGMENTATION`。
+
+目标：`DETERMINISTIC_CONTROL_PLANE_FRAGMENTATION = 0` where a canonical helper exists。
 
 ### 6. Release-as-debugger — HIGH SEVERITY
 

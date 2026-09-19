@@ -56,7 +56,7 @@ VERIFY FAIL
 
 Full Suite 永远是 Stage Gate，不进入 debugging loop。Acceptance 同理：发现产品 defect 后应回 Engineering Repair Stage，修完再回同一 Acceptance scene，而不是一边真实验收一边持续改源码。
 
-## Long work: start once, never babysit
+## Long work: start once, never babysit, exhaust useful work
 
 任何已知慢任务都遵循：
 
@@ -65,25 +65,47 @@ start exactly once
 → record PID/session
 → record log path when available
 → record terminal Owner authority / target identity
-→ continue independent work
-→ check only at the dependency point
+→ plan all currently eligible mainline work
+→ execute it to exhaustion
+→ replan downstream gate-safe work
+→ only after the work pool stays empty: inspect terminal authority
+→ PID/session only when terminal authority cannot close
+→ RUNNING/UNKNOWN => mandatory replan + more useful work
+→ return only after exhaustive replanning finds nothing else safe and relevant
 ```
 
-启动确认后，不要继续 `read_process_output`、`ps`、health/status、Registry query 或固定间隔等待，只为知道“还活着吗”。如果没有独立工作，直接把控制权还给用户。
+任务在两种情况下进入 `ASYNC_BOUND`：本来就是 known-slow，或第一次 Local 调用已经返回 live PID/session + `running/timeout`。
 
-依赖点真正到来时：
+进入后，**异步任务本身不能成为本轮结束条件，也不能成为立刻检查 PID 的理由**。Chat 先执行所有同时满足以下条件的当前工作：
+- 与当前主线直接相关；
+- 不依赖该异步任务的终态；
+- 不越过当前 Stage / Gate；
+- 不要求猜测尚未确认的 owner/runtime truth；
+- 可以在当前 authority 与安全边界下独立完成。
+
+当前任务池做空后，Chat 还必须主动向后规划一轮，例如：下一 Gate 的只读准备、release/adoption 依赖梳理、owner/identity 只读事实、后续自动化入口准备、文档/契约一致性检查等，只要它们仍属于主线、不过 Gate、且不依赖异步终态。**只有“当前任务池为空 + 主动再规划仍找不到任务”时，才允许第一次检查终态/PID。**
+
+状态检查顺序：
 
 ```text
-terminal Owner authority first
-→ satisfied: PASS/APPLIED, stop
-→ unresolved: inspect recorded PID/session once
-   → alive: RUNNING, continue independent work or return control
-   → dead: read terminal log/output once
-            → classify
-            → retry only after proven NOT_APPLIED/FAILED
+work pool exhausted
+→ proactive replan finds no eligible work
+→ terminal Owner authority first
+→ satisfied: PASS/APPLIED, continue next gated work
+→ unresolved: inspect recorded PID/session if needed
+   → dead: read terminal log/output once, classify
+   → alive/RUNNING:
+        mandatory replan of current + downstream gate-safe work
+        → execute all newly eligible work
+        → exhaust work pool again
+        → only then may terminal authority/PID be checked again
 ```
 
-普通 known-slow task 若当前决策真的必须等待终态，可以保持同一 session，但只能在新证据会改变决策时采样，禁止固定周期 polling。
+同一个 authority 在同一个 turn **不再设固定“一次 readback”上限**。新的约束更严格：任何两次 readback 之间必须存在真实的 `replan → meaningful mainline work → work-pool exhaustion` 循环；没有实质工作就连续查状态，仍然属于 polling，禁止。
+
+`RUNNING` / `UNKNOWN` 绝不能直接触发 return。每次 unresolved readback 后都必须重新规划；只有重新规划确认**所有剩余有意义的主线动作都依赖异步终态，或继续动作会跨 Gate**，且没有新任务可做时，才允许把控制权还给用户。
+
+禁止为了“保持忙碌”去做无关清理、额外重构、扩 scope 或提前进入下一 Gate。也不得追加 `list_sessions → ps/status/health → log` 形成等待链。下一次用户 continuation 从已记录 authority 恢复，不重启任务。
 
 ## npm publish / release — absolute non-blocking
 
@@ -92,8 +114,11 @@ npm publish/release 无条件禁止同步等待：
 ```text
 start once, detached/durable
 → record PID/session + log + exact package@version
-→ continue independent work immediately
-→ later dependency point: npm view exact Registry authority first
+→ execute all current eligible mainline work
+→ proactively replan downstream gate-safe work
+→ only after work exhaustion: check exact Registry authority
+→ Registry absent / publish still RUNNING => replan and continue useful work
+→ return only when no further safe relevant work exists
 ```
 
 最终 authority：
@@ -102,7 +127,7 @@ start once, detached/durable
 npm view <package>@<version> version
 ```
 
-exact version 已存在即 `APPLIED/PASS`，无需再关心原 publish 进程。Registry 尚未满足时才检查 PID 一次；PID 活着判 `RUNNING`，PID 已退出才读日志一次。只有机械证明 `NOT_APPLIED/FAILED` 后才能重试。
+exact version 已存在即 `APPLIED/PASS`，无需再关心原 publish 进程。Registry 尚未满足时，不允许立刻转去盯 PID；先确认当前及后续可做工作已经耗尽，再检查 PID/session。PID 活着判 `RUNNING` 后必须再次规划可独立推进的后续工作并执行；PID 已退出才读日志一次。只有机械证明 `NOT_APPLIED/FAILED` 后才能重试。若发布结果尚未满足且经过再次规划仍没有任何不跨 delivery Gate 的独立工作，才返回控制。
 
 禁止 publish 一个临时版本来调试实现。Publish 只能发生在 Stage Verify / required Acceptance 之后的正式 delivery phase。
 
@@ -133,10 +158,12 @@ receipt 原子记录至少：`READY_TO_APPLY`、`APPLYING`、`APPLIED_VERIFYING`
 若 Tool/PTTY/session output 丢失：
 
 ```text
-read DURABLE_RECEIPT first
-→ terminal: consume result, do not rerun
-→ nonterminal: recover latest checkpoint/currentVerification
-→ inspect PID/session only if receipt cannot close the decision
+first exhaust all useful work that does not depend on this result
+→ replan once for additional gate-safe work
+→ read DURABLE_RECEIPT
+   → terminal: consume result, do not rerun
+   → nonterminal: replan/continue useful work
+   → inspect PID/session only after work exhaustion and only if receipt cannot close the decision
 ```
 
 已经记录 `passed=true` 的 verification command 不重复执行。只有新的失败证据或未完成 checkpoint 才允许 targeted recovery。

@@ -14,8 +14,6 @@ import {
   ListToolsRequestSchema,
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { BrokerAuthority } from "./authority.js";
-import { AUTHORITY_CLAIM_TOOL, BrokerAuthorityError } from "./authority.js";
 import type { BrokerConfiguration } from "./config.js";
 
 const MAX_HTTP_BODY_BYTES = 1_048_576;
@@ -45,11 +43,6 @@ export interface BrokerUpstreamFactory {
 export interface BrokerHttpRuntime {
   readonly server: HttpServer;
   close(): Promise<void>;
-}
-
-export interface BrokerRuntimeOptions {
-  readonly authority?: BrokerAuthority;
-  readonly controllerToken?: string;
 }
 
 function createClientBackedUpstream(
@@ -273,54 +266,14 @@ export function createStreamableHttpProcessUpstreamFactory(config: BrokerConfigu
   });
 }
 
-function createForwardingServer(
-  upstream: BrokerUpstream,
-  brokerId: string,
-  authority?: BrokerAuthority,
-  consumerRef?: string,
-): Server {
+function createForwardingServer(upstream: BrokerUpstream, brokerId: string): Server {
   const server = new Server(
     { name: `mcp-shared-broker:${brokerId}`, version: "0.2.0" },
     { capabilities: { tools: {} } },
   );
-  server.setRequestHandler(ListToolsRequestSchema, async (request) => {
-    const result = await upstream.listTools(request.params);
-    if (!authority) return result;
-    if (result.tools.some((tool) => tool.name === AUTHORITY_CLAIM_TOOL)) {
-      throw new Error(`Upstream tool name ${AUTHORITY_CLAIM_TOOL} is reserved.`);
-    }
-    return {
-      ...result,
-      tools: [
-        ...result.tools.map((tool) => authority.decorateTool(tool)),
-        authority.claimToolDefinition(),
-      ],
-    };
-  });
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    if (authority && request.params.name === AUTHORITY_CLAIM_TOOL) {
-      return CallToolResultSchema.parse({
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(authority.claim(request.params.arguments ?? {}, consumerRef)),
-          },
-        ],
-      });
-    }
-    const params = authority
-      ? {
-          ...request.params,
-          arguments: authority.authorizeToolCall(
-            request.params.name,
-            request.params.arguments ?? {},
-            consumerRef,
-          ),
-        }
-      : request.params;
-    const result = await upstream.callTool(params);
-    return CallToolResultSchema.parse(result);
-  });
+  server.setRequestHandler(ListToolsRequestSchema, (request) => upstream.listTools(request.params));
+  server.setRequestHandler(CallToolRequestSchema, async (request) =>
+    CallToolResultSchema.parse(await upstream.callTool(request.params)));
   return server;
 }
 
@@ -346,14 +299,6 @@ function writeText(response: ServerResponse, status: number, body: string): void
   response.end(body);
 }
 
-function writeJson(response: ServerResponse, status: number, body: unknown): void {
-  response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-  });
-  response.end(JSON.stringify(body));
-}
-
 function writeMcpError(response: ServerResponse, status: number, message: string): void {
   response.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" });
   response.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message }, id: null }));
@@ -364,82 +309,21 @@ function sessionId(request: IncomingMessage): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-function controllerAuthorized(request: IncomingMessage, controllerToken: string | undefined): boolean {
-  return Boolean(controllerToken && request.headers.authorization === `Bearer ${controllerToken}`);
-}
-
-async function handleAuthorityRequest(
-  request: IncomingMessage,
-  response: ServerResponse,
-  pathname: string,
-  options: BrokerRuntimeOptions,
-): Promise<boolean> {
-  if (!pathname.startsWith("/authority/v2/")) return false;
-  if (!options.authority) {
-    writeJson(response, 404, { error: "BROKER_AUTHORITY_DISABLED" });
-    return true;
-  }
-  if (!controllerAuthorized(request, options.controllerToken)) {
-    writeJson(response, 401, { error: "BROKER_AUTHORITY_AUTH_INVALID" });
-    return true;
-  }
-  try {
-    if (pathname === "/authority/v2/status" && request.method === "GET") {
-      writeJson(response, 200, options.authority.status());
-      return true;
-    }
-    if (pathname === "/authority/v2/downgrade" && request.method === "POST") {
-      writeJson(response, 200, options.authority.downgradeForHandoff(await readJsonBody(request)));
-      return true;
-    }
-    if (pathname === "/authority/v2/prepare" && request.method === "POST") {
-      writeJson(response, 200, options.authority.prepareSuccessor(await readJsonBody(request)));
-      return true;
-    }
-    if (pathname === "/authority/v2/promote" && request.method === "POST") {
-      writeJson(response, 200, options.authority.promoteSuccessor(await readJsonBody(request)));
-      return true;
-    }
-    if (pathname === "/authority/v2/revoke" && request.method === "POST") {
-      writeJson(response, 200, options.authority.revoke(await readJsonBody(request)));
-      return true;
-    }
-    writeJson(response, 404, { error: "BROKER_AUTHORITY_ENDPOINT_NOT_FOUND" });
-    return true;
-  } catch (error) {
-    if (error instanceof BrokerAuthorityError) {
-      writeJson(response, error.status, { error: error.code, message: error.message });
-      return true;
-    }
-    writeJson(response, 400, {
-      error: "BROKER_AUTHORITY_REQUEST_INVALID",
-      message: error instanceof Error ? error.message : "Invalid broker authority request.",
-    });
-    return true;
-  }
-}
-
 export function createBrokerHttpRuntime(
   upstreamFactory: BrokerUpstreamFactory,
   brokerId: string,
-  options: BrokerRuntimeOptions = {},
 ): BrokerHttpRuntime {
-  if (options.authority && !options.controllerToken) {
-    throw new Error("Broker authority requires a controller token.");
-  }
   const sessions = new Map<
     string,
     Readonly<{
       transport: StreamableHTTPServerTransport;
       server: Server;
       upstream: BrokerUpstream;
-      consumerRef: string;
     }>
   >();
   const httpServer = createServer((request, response) => {
     void (async () => {
       const pathname = new URL(request.url ?? "/", "http://broker.local").pathname;
-      if (await handleAuthorityRequest(request, response, pathname, options)) return;
       if (pathname === "/healthz") {
         writeText(response, 200, "live\n");
         return;
@@ -480,29 +364,25 @@ export function createBrokerHttpRuntime(
       }
 
       const upstream = upstreamFactory.openSession();
-      const consumerRef = `broker-consumer:${randomUUID()}`;
-      options.authority?.registerConsumer(consumerRef);
-      const downstream = createForwardingServer(upstream, brokerId, options.authority, consumerRef);
+      const downstream = createForwardingServer(upstream, brokerId);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id): void => {
           sessions.set(
             id,
-            Object.freeze({ transport, server: downstream, upstream, consumerRef }),
+            Object.freeze({ transport, server: downstream, upstream }),
           );
         },
       });
       downstream.onclose = () => {
         const id = transport.sessionId;
         if (id) sessions.delete(id);
-        options.authority?.unregisterConsumer(consumerRef);
         void upstream.close();
       };
       try {
         await downstream.connect(transport as Parameters<Server["connect"]>[0]);
         await transport.handleRequest(request, response, body);
       } catch (error) {
-        options.authority?.unregisterConsumer(consumerRef);
         await downstream.close().catch(() => undefined);
         await upstream.close().catch(() => undefined);
         throw error;
@@ -522,8 +402,7 @@ export function createBrokerHttpRuntime(
       const active = [...sessions.values()];
       sessions.clear();
       await Promise.allSettled(
-        active.map(async ({ server, upstream, consumerRef }) => {
-          options.authority?.unregisterConsumer(consumerRef);
+        active.map(async ({ server, upstream }) => {
           await server.close().catch(() => undefined);
           await upstream.close().catch(() => undefined);
         }),
@@ -556,10 +435,9 @@ export async function listenBrokerHttp(
 export async function connectManagerStdio(
   upstreamFactory: BrokerUpstreamFactory,
   brokerId: string,
-  authority?: BrokerAuthority,
 ): Promise<Server> {
   const upstream = upstreamFactory.openSession();
-  const server = createForwardingServer(upstream, brokerId, authority);
+  const server = createForwardingServer(upstream, brokerId);
   server.onclose = () => {
     void upstream.close();
   };

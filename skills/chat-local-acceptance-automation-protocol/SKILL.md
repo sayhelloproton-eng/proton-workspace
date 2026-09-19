@@ -63,6 +63,7 @@ Detailed capability semantics: [references/common-capabilities.md](references/co
 - **SIDE-EFFECT-RECONCILIATION.** Lost/timed-out mutation result is `APPLIED | NOT_APPLIED | UNKNOWN` only after durable authority readback; retry requires proven `NOT_APPLIED`.
 - **MINIMUM-SUFFICIENT-PROOF.** Gather only evidence required for the next decision/contract.
 - **CONTINUE-EXISTING-BEFORE-RESTART.** Preserve current PID/session/PTTY/tab/auth/checkpoint before recreating anything.
+- **ASYNC-CONTINUATION-BARRIER.** Never inspect PID/session/status immediately after an async start. First exhaust all current acceptance work that is relevant, safe, and gate-correct, then proactively replan downstream gate-safe work. Only when that work pool remains empty may terminal authority be checked; PID/session is fallback only. A `RUNNING/UNKNOWN` readback forces another replan/work cycle and is never by itself a reason to return control.
 - **RUN-BOUNDARY-FIRST.** Open exactly one `AUTOMATION_START` before the first acceptance mutation/long wait/connect/recover/log-dependent proof and bind fresh evidence.
 - **RETURN-CONTROL-CLOSES-RUN.** Before final/handoff/blocked return, append truthful terminal `AUTOMATION_RUN` and prove the run closed.
 - **HARNESS-VALID-BEFORE-SCORING.** Broken/truncated/contaminated harness evidence is `HARNESS_INVALID`, not product/model truth.
@@ -93,11 +94,24 @@ Do not keep clicking through a broken product while code changes underneath the 
 ```text
 start once
 → bind PID/session/log/event authority
-→ continue independent acceptance work
-→ check at dependency point only
+→ plan all currently eligible acceptance work
+→ execute that work to exhaustion
+→ proactively replan downstream gate-safe work
+→ only when no eligible work remains: inspect terminal authority
+→ inspect PID/session only if terminal authority cannot decide
+→ RUNNING/UNKNOWN => mandatory replan + more eligible work
+→ return only after exhaustive replanning finds no safe relevant work
 ```
 
-No model-driven “still running?” polling. If control returns to the user while work remains asynchronous, close the current automation run truthfully; a later continuation opens a new run and reuses the product checkpoint/owner authority.
+A process becomes `ASYNC_BOUND` when it is known-slow or the first Local result returns a live PID/session with `running/timeout`.
+
+After that boundary, **direct PID/status inspection is forbidden until the work pool has been exhausted and a proactive downstream replan also finds nothing else eligible**. “Eligible” means directly relevant to the current acceptance/mainline, not dependent on the async result, not crossing the current Stage/Gate, and safe under current owner/scene authority.
+
+If the eventual terminal/PID readback is still `RUNNING` / unresolved, Chat must replan again and execute every newly eligible task before another status check is allowed. There is no fixed one-readback-per-turn limit; instead, every additional readback for the same authority requires a real intervening `replan → meaningful work → work-pool exhaustion` cycle. Two status reads with no meaningful work between them are polling and forbidden.
+
+No model-driven “still running?” loop. No unrelated busywork merely to avoid returning. Control may return only after the current work pool is empty, a fresh downstream replan is empty, and every remaining meaningful action either depends on the async terminal result or would cross the current Gate.
+
+If control returns to the user while work remains asynchronous, close the current automation run truthfully; a later continuation opens a new run and reuses the product checkpoint/owner authority.
 
 ## Run evidence — HARD RULE
 
@@ -109,7 +123,7 @@ AUTOMATION_START(runId, fresh evidence boundary)
 → AUTOMATION_RUN(same runId, terminal or hand-off outcome)
 ```
 
-Default writer: `python3 scripts/append-run-log.py --input -`. Before returning control, run `python3 scripts/check-open-runs.py --run-id <runId> --fail-on-open`. Logging failure is `AUTOMATION_LOGGING=FAIL`; never replay product mutation just to repair telemetry.
+Default writer: `python3 scripts/append-run-log.py --input -`. For Browser-control runs, prefer the deterministic boundary helper `python3 scripts/browser-run-boundary.py open|close ...`, which compresses `START + lease` and `terminal + release + open-check` into one local transaction each. Before returning control, the run must still be mechanically closed. Logging failure is `AUTOMATION_LOGGING=FAIL`; never replay product mutation just to repair telemetry.
 
 Detailed schema/privacy/artifacts: [references/run-logging.md](references/run-logging.md).
 
@@ -134,4 +148,4 @@ Do not load all references by default.
 
 ## Core principle
 
-**先看用户真实世界，再识别对象和第一 divergence；能只看就不动，能复用就不重建；实现阶段结束后再做真实 Acceptance，最终 PASS 必须来自真实用户路径。**
+**先看用户真实世界，再识别对象和第一 divergence；异步任务先把当前和后续所有可安全推进的工作做尽，再看终态；若仍未完成就重新规划并继续，只有所有可能任务都耗尽后才返回控制权；最终 PASS 必须来自真实用户路径。**

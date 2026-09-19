@@ -22,7 +22,7 @@ Expected: `LISTEN + RECOVER`; consume partial evidence first. Do not erase it wi
 
 ## R5 — Playwright relay page error
 Scenario: `connect.html` visibly shows WebSocket/MCP relay failure.
-Expected: `SEE → CONNECT → RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`; repair canonical tool infrastructure and then prove target Browser control. No product diagnosis, journey restart, second relay, or improvised transport.
+Expected: `SEE → CONNECT → RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`; after the required Browser lease, use `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-recover.py`, then prove target Browser control. No product diagnosis, journey restart, second relay, or improvised transport.
 
 ## R6 — CLI launches OAuth/GitHub Browser Auth
 Scenario: an interactive CLI has determined auth is required and opened an ordinary Browser auth page.
@@ -50,7 +50,7 @@ Expected: `SAME_SCENE` at C or `FAST_REPLAY` only affected downstream behavior. 
 
 ## R12 — controlled context was lost, product identity was not
 Scenario: Browser/tool reconnect loses controlled group but original business tabs/resources still exist.
-Expected: `CONNECT + RECOVER + IDENTIFY`; recover original tabs and prove readability. Do not duplicate product tabs/resources.
+Expected: `CONNECT + RECOVER + IDENTIFY`; recover the original tab through `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-rebind-existing-tab.py` with a durable selector and prove readability. Ambiguous identity must fail closed; do not duplicate product tabs/resources.
 
 ## R13 — automation knowledge exists only in a legacy project runbook
 Scenario: current product facts identify goal/checkpoint, but required recovery/do-not-repeat semantics exist only in a project-local legacy automation document and are absent from the shared Skill.
@@ -81,8 +81,8 @@ Scenario: two automation clients request the same real Chrome Profile/Playwright
 Expected: `CONNECT + IDENTIFY + RECOVER`; establish one canonical Browser owner, leave competing request unapproved/disconnected, prove intended control. Do not approve both or treat tool-control loss as product loss.
 
 ## R20 — runtime READY but Browser control is not READY
-Scenario: managed Playwright runtime is healthy but repeated `browser_tabs`/snapshot cannot read intended context.
-Expected: `CONNECT + RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`; distinguish runtime from relay/control health. No product journey restart or product defect classification.
+Scenario: managed Playwright runtime is healthy but repeated Browser control cannot read intended context.
+Expected: `CONNECT + RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`; after the required Browser lease, use the workspace `automation/gptweb-mcp/playwright-recover.py` bounded recovery entry. No product journey restart, Skill-owned runtime wrapper, or product defect classification.
 
 ## R21 — mutating request timed out after dispatch
 Scenario: a non-idempotent mutation may have reached its owner, but response was lost and a durable postcondition can be queried.
@@ -100,9 +100,13 @@ Expected: use this Skill as the sole automation truth and ignore/migrate the con
 Scenario: canonical `gptweb-mcp`/runtime authority reports `local-dev` or `playwright-chrome` already managed and READY, while the product acceptance path proposes `npx`/`npm exec` of the same Desktop Commander or Playwright Extension MCP to perform discovery.
 Expected: `CONNECT + IDENTIFY + VERIFY`; prove the existing owner first and keep `sideEffectState=NOT_APPLIED` for the proposed duplicate spawn. Reuse only a manager-owned supported connection surface. Do not start a second raw stdio server/controller, do not attach another client to an existing child's stdin/stdout, and do not restart/steal the existing owner. If the product implementation hard-codes duplicate ownership, stop at FIRST_DIVERGENCE and route to engineering as `PRODUCT_DEFECT` when it violates the intended ownership contract, or `SPEC_EXTERNAL_MISMATCH` when the formal contract itself demands an incompatible ownership model.
 
+## R25 — Playwright runtime/replay scene survived but control did not
+Scenario: Chrome/business tabs/old Welcome pages survive while current Browser control is missing, stale, or the upstream died. Old Welcome may still display historical `connected` even though it is no longer authority.
+Expected: `CONNECT + RECOVER + IDENTIFY`, `failureClass=TOOL_RUNTIME_FAILURE`. Acquire the required Browser lease, then use only `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-recover.py`; it owns the bounded connect/start-or-restart/connect sequence. If the original business tab is outside the new controlled group, use the workspace `playwright-rebind-existing-tab.py` with a durable selector. Do not edit/reuse old relay URLs, hard-code port/UUID, create a second controller/window/business tab, restart Chrome merely because relay identity changed, or select an ambiguous duplicate target.
+
 ## Pass criteria
 
-PASS means direct selection of the Skill-owned capability/mode/failure class/path with no unnecessary history, alternate transport invention, blind retry, discarded checkpoint, duplicate resource/runtime owner, stale-evidence attribution, hidden observation mutation, second automation truth, or evidence beyond the contract.
+PASS means direct selection of the Skill-owned capability/mode/failure class/path with no unnecessary history, alternate transport invention, blind retry, discarded checkpoint, duplicate resource/runtime owner, stale-evidence attribution, hidden observation mutation, second automation truth, stale-relay reuse, or evidence beyond the contract.
 
 Failure to use current visible reality when it decides the next step is `DID_NOT_USE_EYES_FIRST`. Screenshot/Vision on ordinary Web when semantic DOM already proves the fact is `EXCESS_PROOF`.
 
@@ -112,7 +116,7 @@ Failure to use current visible reality when it decides the next step is `DID_NOT
 - `B2 = R5` — relay error → CONNECT / TOOL_RUNTIME_FAILURE.
 - `B3 = R10` — harness failure must not become product failure.
 - `B4 = R11` — SAME_SCENE/FAST_REPLAY instead of Full Fresh.
-- `B5 = R12 + R19 + R20` — Browser ownership/recovery without duplicate product state.
+- `B5 = R12 + R19 + R20 + R25` — Browser ownership/recovery through workspace automation without duplicate product state or stale-relay reuse.
 - `B6 = R18` — same-transaction Browser-mediated authentication.
 - `B7 = R21` — side-effect reconciliation before retry.
 - `B8 = R23` — shared Skill wins over conflicting project automation instructions.

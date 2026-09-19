@@ -86,6 +86,12 @@ primitive_policy:
   global_default_shell_mutation: forbidden
   browser_fact_owner: acceptance_eyes_playwright_ax
 
+control_plane_compression:
+  repeated_deterministic_sequence_without_model_judgment: PROMOTE_OR_USE_CANONICAL_HELPER
+  model_should_not_split_helper_owned_sequence_into_multiple_tool_calls: true
+  helper_result_surface: FINAL_RECEIPT
+  existing_helper_manual_fragmentation_failure_family: CONTROL_PLANE_FRAGMENTATION
+
 repomix:
   include_patterns_preferred_when_scope_known: true
   explicit_recursive_ignore_required: true
@@ -131,39 +137,65 @@ verification:
   high_frequency_status_polling: forbidden
 
 long_running_processes:
-  universal_sequence: [START_ONCE, RECORD_DURABLE_AUTHORITY, CONTINUE_INDEPENDENT_WORK, CHECK_AT_DEPENDENCY_POINT]
+  universal_sequence: [START_ONCE, RECORD_DURABLE_AUTHORITY, PLAN_CURRENT_ELIGIBLE_WORK, EXECUTE_TO_EXHAUSTION, REPLAN_DOWNSTREAM_GATE_SAFE_WORK, CHECK_TERMINAL_AUTHORITY_ONLY_AFTER_EXHAUSTION, PID_ONLY_IF_TERMINAL_UNRESOLVED, IF_RUNNING_REPLAN_AND_CONTINUE, RETURN_ONLY_AFTER_GLOBAL_ELIGIBLE_WORK_EXHAUSTION]
   known_slow_examples: [PACKAGE_BUILD, PUBLISHABILITY, RELEASE_PUBLISH, DEPLOY, INSTALL, FULL_SUITE]
+  async_bound_when: [KNOWN_SLOW, FIRST_LOCAL_RESULT_RUNNING_OR_TIMEOUT_WITH_LIVE_AUTHORITY]
+  async_bound_alone_authorizes_return: false
+  direct_pid_or_status_check_before_work_exhaustion: forbidden
+  current_work_pool_exhaustion_required_before_first_status_check: true
+  proactive_downstream_replan_required_before_first_status_check: true
+  independent_work_definition: [MAINLINE_RELEVANT, NOT_DEPENDENT_ON_ASYNC_RESULT, DOES_NOT_CROSS_CURRENT_GATE, SAFE_UNDER_CURRENT_OWNER_AUTHORITY]
+  downstream_replan_examples: [NEXT_GATE_READ_ONLY_PREPARATION, RELEASE_ADOPTION_PREPARATION, OWNER_IDENTITY_FACTS, AUTOMATION_ENTRY_PREPARATION, CONTRACT_CONSISTENCY_CHECK]
+  busywork_to_avoid_return: forbidden
+  running_readback_is_return_condition: false
+  running_readback_requires_replan: true
+  additional_same_authority_readback_requires_intervening_meaningful_work_cycle: true
+  meaningful_work_cycle: [REPLAN, EXECUTE_MAINLINE_WORK, WORK_POOL_EXHAUSTION]
+  fixed_same_authority_readback_limit_per_turn: null
+  progress_probe_chain_without_intervening_work: forbidden
+  progress_probe_chain_examples: [READ_PROCESS_OUTPUT_AGAIN, LIST_SESSIONS_FOR_SAME_AUTHORITY, PS, STATUS, HEALTH, LOG]
+  return_control_requires:
+    - CURRENT_WORK_POOL_EXHAUSTED
+    - DOWNSTREAM_GATE_SAFE_REPLAN_EMPTY
+    - POST_RUNNING_REPLAN_EMPTY_WHEN_APPLICABLE
+    - REMAINING_ACTIONS_DEPEND_ON_ASYNC_RESULT_OR_CROSS_GATE
+  later_user_turn_resumes_recorded_authority: required
   terminal_not_required_same_turn:
     start_once: true
     detached_or_durable_process_preferred: true
     record: [PID_OR_SESSION, LOG_PATH_WHEN_AVAILABLE, TERMINAL_AUTHORITY]
-    continue_independent_work_after_start: required
-    if_no_independent_work: RETURN_CONTROL
-    same_turn_status_polling_after_start: forbidden
-    same_turn_status_polling_target: 0
+    plan_before_first_status_check: required
+    execute_all_eligible_work_before_first_status_check: required
+    proactive_replan_before_first_status_check: required
+    immediate_status_check_after_start: forbidden
+    if_work_pool_empty: REPLAN_BEFORE_STATUS_CHECK
+    terminal_authority_before_pid: required
+    if_pid_running: REPLAN_AND_CONTINUE
+    return_only_after_post_readback_replan_exhausted: required
     timeout_with_confirmed_pid_is_failure: false
     replacement_process_on_timeout: forbidden
-  later_status_check_order: [TERMINAL_AUTHORITY, PID_OR_SESSION_ONCE, LOG_ONCE_IF_DEAD]
-  alive_without_terminal_authority: RUNNING_CONTINUE_OR_RETURN
+  status_check_order_after_work_exhaustion: [TERMINAL_AUTHORITY, PID_OR_SESSION_IF_UNRESOLVED, LOG_ONCE_IF_DEAD]
+  alive_without_terminal_authority: RUNNING_REPLAN_AND_CONTINUE_UNTIL_WORK_EXHAUSTED
   non_idempotent_retry_requires: PROVEN_NOT_APPLIED_OR_FAILED
   npm_publish_terminal_authority: EXACT_REGISTRY_VERSION
   npm_publish_release:
     synchronous_wait: forbidden
     start_exactly_once_detached: true
     record: [PID_OR_SESSION, LOG_PATH_WHEN_AVAILABLE, EXACT_PACKAGE_VERSION]
-    continue_independent_work_after_start: required
-    same_turn_process_output_wait: forbidden
-    same_turn_pid_polling: forbidden
-    same_turn_registry_polling: forbidden
-    if_no_independent_work: RETURN_CONTROL
-    later_decision_authority_first: "npm view <package>@<version> version"
+    plan_and_execute_all_eligible_work_before_registry_or_pid_check: required
+    proactive_replan_before_first_status_check: required
+    immediate_pid_or_registry_polling_after_start: forbidden
+    registry_check_only_after_work_exhaustion: true
     registry_exact_present: APPLIED_PASS
-    registry_absent_then: [PID_OR_SESSION_ONCE, LOG_ONCE_IF_DEAD]
-    alive_without_registry_target: RUNNING_CONTINUE_OR_RETURN
+    registry_absent_then: REPLAN_BEFORE_PID_CHECK
+    pid_running_then: REPLAN_AND_CONTINUE
+    additional_status_check_requires_intervening_meaningful_work_cycle: true
+    return_only_after_exhaustive_replan: required
     retry_requires: PROVEN_NOT_APPLIED_OR_FAILED
     overrides_terminal_required_same_turn_wait: true
   terminal_required_same_turn:
     same_session_wait_allowed: true
+    same_session_wait_requires_work_exhaustion: true
     npm_publish_release_excluded: true
     fixed_interval_polling: forbidden
     sample_only_when_decision_value: true
@@ -191,7 +223,10 @@ metrics:
   phase_timing_values_must_be_observed_not_estimated: true
   timing_only_tool_calls: forbidden
   formal_test_starts_before_stage_freeze_target: 0
-  known_slow_detached_same_turn_polls_target: 0
+  async_pid_or_status_check_before_work_exhaustion_target: 0
+  async_running_readback_without_replan_target: 0
+  async_status_recheck_without_intervening_work_cycle_target: 0
+  async_early_return_with_eligible_work_target: 0
   frozen_control_plane_model_reentries_target: 0
   model_authored_manifest_target: 0
   ready_to_payload_intervening_tool_calls_target: 0

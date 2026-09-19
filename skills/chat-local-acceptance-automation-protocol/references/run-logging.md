@@ -12,6 +12,8 @@ Default local-only ledger:
 
 Use `python3 scripts/append-run-log.py --input -` by default and stream the compact JSON record over stdin. The writer locks concurrent appends, validates capability/routing/behavioral fields, validates uncertain side-effect state, rejects secret-like keys **and embedded secret-like values**, rejects oversized records, and enforces the run-start/terminal pairing contract.
 
+For real Browser-control runs, prefer `python3 scripts/browser-run-boundary.py open|close ...` rather than manually issuing separate logger / Browser-lease / closure-check calls. It preserves the same ledger and lease authorities while compressing stable mechanical steps into one Local transaction per boundary.
+
 ## Artifact placement and lifecycle — HARD RULE
 
 `/Users/agent/Desktop/proton-workspace` is a shared workspace root, **not a temporary-file directory**. Acceptance automation must never place run JSON, screenshots, logs, status files, diagnostic scripts, or other runtime artifacts directly in that root. Do not hide violations with `.gitignore`; prevent the wrong path.
@@ -53,6 +55,15 @@ AUTOMATION_START
 → read only decision-relevant fresh evidence
 → AUTOMATION_RUN
 ```
+
+Browser-control run boundary compression:
+
+```text
+open:  browser-run-boundary.py open --mode <shared|exclusive> --input -
+close: browser-run-boundary.py close --input -
+```
+
+`open` validates and appends the start record, then acquires the Browser lease in the same Local transaction. `close` appends the terminal record, releases the lease, and proves the run is closed in the same Local transaction. If lease acquisition fails before any product action, the helper fail-closes the just-opened run instead of leaving an orphan start.
 
 `AUTOMATION_START` is intentionally cheap. It exists because terminal-only logging can make an entire failed or interrupted run invisible. Its `recordedAt` is the minimum fresh-evidence time boundary. When the run needs `WAIT`, `LISTEN`, `CONNECT`, or `RECOVER`, set `freshEvidenceWindowBound=true` and bind the stable PID/session/log cursor or equivalent owner evidence when available before the first relevant action.
 
