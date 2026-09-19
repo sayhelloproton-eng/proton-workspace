@@ -169,6 +169,12 @@ ProFlow Runtime / Task / Tool Capability
 
 - [现代 AI 工程：从模型智能到长期 Agent 系统](./现代AI工程/README.md)：从 Transformer、RAG、Tool、Agent、Runtime、Multi-Agent 一路讲到 Eval、Platform、小模型与真实岗位，是整套知识的连续学习主线；
 - [AI 业务工程：从“能用 AI”到“把 AI 变成长期业务能力”](./AI业务工程/README.md)：承接现代 AI 工程的底层责任，继续讲场景选择、成本、模型与系统 Eval、生产可观测性、Behavior Release、故障恢复、安全治理、资产化和组织能力飞轮；
+- [专业 Agent 资产化：从一次性角色到可复用工程能力](./专业Agent资产化.md)：解释长期 Role、运行实例、Harness、Eval 与 Behavior Release 怎样组成可复用专业 Agent，并说明失败、准入、降级与退役边界；
+- [上下文工程：怎样把知识、状态和运行现实编译成 Agent 当前真正需要的输入](./上下文工程.md)：解释不同 Fact Owner、Task / Runtime Reality、正式 Knowledge、RAG、Memory 与 History 怎样按当前 Consumer / Role / Phase 编译成最小充分 Context，以及失效、Handoff 和 Recovery 为什么必须重新读取现实；
+- [知识资产治理：怎样让长期知识可信、可修订、可发布、可退役](./知识资产治理.md)：解释正式知识里的 Claim、Evidence、事实强度、修订与取代、投影发布、反证和退役怎样被轻量治理，并说明为什么当前采用“轻映射、重提炼”而不是恢复重型 Registry；
+- [Task 工程：怎样把目标冻结成可执行、可移交、可验证的长期任务](./Task工程.md)：解释 Goal、Plan、Task、Execution 为什么必须分层，以及 Plan Freeze、Task Decomposition、Task Contract、Execution Lane、Handoff、Integration 与 Completion 怎样保护长期意图不被执行过程偷偷改写；
+- [Agent 项目治理：怎样从 Task 事实形成阶段基线，而不是靠进度汇报](./Agent项目治理.md)：解释 Project State 怎样从多个 Fact Owner 汇总，Stage Gate 怎样阻止局部 PASS 冒充阶段完成，以及 Baseline Candidate / Freeze 怎样形成下一阶段可以共同依赖的项目事实；
+- [智能体工程术语表](./术语表.md)：统一 Agent、Runtime、Task、State、Context、Memory、Skill、Tool、Evidence 等跨项目稳定术语；
 - [Agent 工程复杂度与边界](./Agent工程复杂度与边界.md)：回答什么时候应该升级复杂度，什么时候应该主动降级；
 - [Agent、Skill、Tool、Script 与 Workflow 的职责边界](./Agent-Skill-Tool-Workflow职责边界.md)：回答判断、方法、能力、确定执行和长期状态分别应该由谁负责；
 - [本机 Agent 工具链](./本机Agent工具链.md)：记录 Chat 如何通过本机事实工具、Skill 和自动化进入真实工程环境；

@@ -111,6 +111,35 @@ hard instructions / policy
 
 Context Budget 因而不仅是模型窗口大小问题，也是 Runtime / Harness 的资源分配问题。
 
+## Context 不是复制出来的，而是编译出来的
+
+长期 Agent 如果把所有可用信息直接拼成 Prompt，实际上没有真正的 Context 管理。更稳的模型是把上下文分成三个层次：
+
+```text
+Context Source
+权威来源、版本和可访问范围
+        ↓ 选择 / 过滤 / 压缩 / 排序
+Context Package
+面向某个角色、任务或 Consumer 的可分发上下文包
+        ↓ 叠加本次 State / Tool Result / Runtime 条件
+Context Instance
+某一次模型调用真正使用的上下文实例
+```
+
+Context Source（上下文来源）可以是 Git、Spec、Database、Knowledge Snapshot、Memory Store 或其他正式来源。它拥有自己的版本和事实边界，不因为被模型读取就改变。
+
+Context Package（上下文包）是派生产物。它把当前 Consumer 真正需要的内容从多个来源编译出来，可以携带 `source_version`、`scope`、`policy`、`budget`、`source_refs` 和内容 Hash。它应该可以从正式来源重新生成，而不是反过来成为第二真源。
+
+Context Instance（上下文实例）则更短命：它是某一次 Invocation 最终看到的输入。即使两个调用使用同一个 Package，也可能因为当前 State、最新 Tool Result、Permission 或预算不同而得到不同 Instance。
+
+这三个对象分开以后，系统才能回答三个不同问题：
+
+- 事实到底来自哪里、哪个版本？看 Source；
+- 某个角色或任务被允许拿到哪些信息？看 Package；
+- 某一次模型当时究竟看到了什么？看 Instance。
+
+这也解释了为什么 Context Compaction、Handoff 和 Recovery 不能只保存一段摘要：恢复时需要回到可重建的 Source 和 Package 关系，再根据当前真实状态生成新的 Instance，而不是继续复用已经过期的旧输入。
+
 ## Context Engineering 比 Prompt Engineering 更上游
 
 Prompt Engineering 主要优化“已经决定进入本轮输入的信息怎样表达”。
