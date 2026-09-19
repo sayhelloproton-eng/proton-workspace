@@ -174,6 +174,7 @@ ProFlow Runtime / Task / Tool Capability
 - [知识资产治理：怎样让长期知识可信、可修订、可发布、可退役](./知识资产治理.md)：解释正式知识里的 Claim、Evidence、事实强度、修订与取代、投影发布、反证和退役怎样被轻量治理，并说明为什么当前采用“轻映射、重提炼”而不是恢复重型 Registry；
 - [Task 工程：怎样把目标冻结成可执行、可移交、可验证的长期任务](./Task工程.md)：解释 Goal、Plan、Task、Execution 为什么必须分层，以及 Plan Freeze、Task Decomposition、Task Contract、Execution Lane、Handoff、Integration 与 Completion 怎样保护长期意图不被执行过程偷偷改写；
 - [Agent 项目治理：怎样从 Task 事实形成阶段基线，而不是靠进度汇报](./Agent项目治理.md)：解释 Project State 怎样从多个 Fact Owner 汇总，Stage Gate 怎样阻止局部 PASS 冒充阶段完成，以及 Baseline Candidate / Freeze 怎样形成下一阶段可以共同依赖的项目事实；
+- [Agent 系统的责任边界：我们为什么选择 DDD、怎样落地，以及它带来了什么](./Agent系统边界建模.md)：解释 DDD 到底解决什么问题，为什么 ProFlow 在长期任务、身份、Authority 与 Provider 边界反复失控后选择 DDD，以及统一语言、限界上下文、Entity / Aggregate、Context Map、防腐层怎样真正落进工程并带来语义稳定、可恢复性和复杂度收敛；
 - [智能体工程术语表](./术语表.md)：统一 Agent、Runtime、Task、State、Context、Memory、Skill、Tool、Evidence 等跨项目稳定术语；
 - [Agent 工程复杂度与边界](./Agent工程复杂度与边界.md)：回答什么时候应该升级复杂度，什么时候应该主动降级；
 - [Agent、Skill、Tool、Script 与 Workflow 的职责边界](./Agent-Skill-Tool-Workflow职责边界.md)：回答判断、方法、能力、确定执行和长期状态分别应该由谁负责；

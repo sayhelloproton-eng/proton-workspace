@@ -503,7 +503,7 @@ Cancel / Terminate、Deadline、Retry / Fallback 等完整生命周期已经由�
 
 ## 并行最终不是多开几个 Worker，而是把依赖和集成变成正式设计
 
-旧 ARC-016 曾经用 MVP-0～MVP-7 描述平台能力依赖。具体路线已经属于历史，但其中一个长期判断仍然成立：
+一个长期有效的工程判断是：
 
 **并行能力必须晚于身份、Version、Evidence、隔离和冲突治理。**
 
