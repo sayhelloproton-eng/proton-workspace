@@ -40,7 +40,7 @@ for (const marker of [
   "/skills/proflow-chat-loop/.handoff/current.md",
 ]) assert.ok(skill.includes(marker), `missing ProFlow loop invariant: ${marker}`);
 
-for (const forbiddenProject of ["ChatWeb", "Job Search System", "ai-agent-platform"]) {
+for (const forbiddenProject of ["ChatWeb", "Job Search System"]) {
   assert.ok(skill.includes(forbiddenProject), `missing explicit project exclusion: ${forbiddenProject}`);
 }
 assert.equal(skill.includes("/repos/proflow/skills/proflow-chat-loop/"), false, "repo-local Skill path must not become a second truth store");

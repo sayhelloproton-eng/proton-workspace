@@ -615,9 +615,9 @@ Approval
 
 ---
 
-## 一个很重要的反例：旧 ai-agent-platform 证明“能设计出来”不等于“现在就值得拥有”
+## 一个很重要的反例：第一代统一平台 证明“能设计出来”不等于“现在就值得拥有”
 
-旧 `ai-agent-platform` 曾经形成过非常完整的目标模型：Platform Registry、Asset Relation、Release、Migration、Projection、Knowledge Pack、Task Control、Evidence、Recovery、Agent Profile 等都有细致设计。
+第一代统一平台 曾经形成过非常完整的目标模型：Platform Registry、Asset Relation、Release、Migration、Projection、Knowledge Pack、Task Control、Evidence、Recovery、Agent Profile 等都有细致设计。
 
 其中很多判断本身并没有错。问题在于，当时一部分复杂度跑在真实需求前面。
 
@@ -827,7 +827,7 @@ ProFlow 的长期任务就属于这种情况。
 → 再考虑 L6 Agent Platform
 ```
 
-这也解释了为什么旧 `ai-agent-platform` 拆掉以后，并不是“平台方向失败了”。真正被保留下来的能力反而更清楚：应该属于产品的回到产品，应该属于共享工程基础设施的进入 workspace，已经确定的机械步骤下降为 Automation，只有仍然需要动态判断的部分留给 Agent。
+这也解释了为什么第一代统一平台 拆掉以后，并不是“平台方向失败了”。真正被保留下来的能力反而更清楚：应该属于产品的回到产品，应该属于共享工程基础设施的进入 workspace，已经确定的机械步骤下降为 Automation，只有仍然需要动态判断的部分留给 Agent。
 
 所以按我当前的需求，最重要的并不是“还差哪一个大平台模块”，而是继续保持这条边界：**ProFlow 为已经真实出现的长期任务复杂度付费；Monitor 为观察、判断和迭代闭环付费；公共工作区只共享真正重复的能力。等第二个产品把同一套控制问题再次逼出来，再购买更高一级的平台复杂度。**
 
@@ -986,7 +986,7 @@ Contract 是否稳定？
 
 ## 最后的判断：成熟不是层级更高，而是责任更清楚
 
-从代码补全、Chat、Coding Agent、本机 Tool、ProFlow 到旧 `ai-agent-platform`，我自己的理解发生过一个很明显的变化。
+从代码补全、Chat、Coding Agent、本机 Tool、ProFlow 到第一代统一平台，我自己的理解发生过一个很明显的变化。
 
 早期很容易把“能力更多”理解成进步：更多 Agent、更多 Workflow、更多平台模块、更多 Registry、更多自动化。
 

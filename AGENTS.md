@@ -16,9 +16,9 @@
 
 This repository is the personal multi-product engineering workspace `proton-workspace`.
 
-## Public knowledge base audience — HARD RULE
+## Public knowledge base publication boundary — HARD RULE
 
-`docs/知识库/` 面向外部技术读者，尤其是第一次了解本人真实工程工作的技术面试官、Tech Lead 和未来同事。它应自然呈现项目为什么发生、怎样演进、遇到什么问题、形成什么成果与工程认识，而不是把内部资料按文档类型搬进去。
+`docs/知识库/` 是独立可读的正式技术知识。正文直接呈现项目为什么发生、怎样演进、哪里失败、形成什么机制、证据和边界；不得把内部受众画像、职业用途或“这是写给谁看的”元叙事写进公开正文。写作时可以内部考虑不同理解门槛，但最终文章必须脱离这些内部画像也能自然成立。
 
 硬边界：
 

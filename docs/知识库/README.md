@@ -6,11 +6,9 @@
 
 本文只维护稳定总览和长期判断。项目的即时状态、当前架构、代码实现和验收结果，仍以各产品仓库的 Source / Spec / Test / Runtime Reality 为准。
 
-## 1. 这份知识库写给谁
+## 1. 这套探索到底在回答什么
 
-主要读者是第一次接触这些工作的技术研发人员，包括技术开发面试官、Tech Lead / Engineering Lead、国内外 Engineering Owner、Staff+ 工程师，以及对 Agent、AI Engineering、Runtime、RAG、Tooling、Workflow 等方向感兴趣的开发者。
-
-他们不是来读一份产品宣传册，而是希望判断几个更具体的问题：
+这套知识不从“有哪些 AI 术语”或“做了多少功能”开始，而是围绕几个可以被真实工程反复检验的问题展开：
 
 - 这里真正解决的工程问题是什么，为什么难；
 - 早期方案为什么不够，哪些地方真实失败过；
@@ -85,9 +83,9 @@ Source / Spec / Test / Runtime Reality
 
 这也是后面 Context、Task、Evidence、Recovery、Harness、Provider Boundary 等主题会不断出现的原因：它们不是为了把系统设计得复杂，而是为了处理真实工作一旦变长、变多、变得有副作用以后必然出现的问题。
 
-## 4. 第一代 `ai-agent-platform` 为什么出现
+## 4. 为什么最早会先做一个统一平台
 
-早期把这些问题集中到 `ai-agent-platform` 是合理的。
+早期把这些问题集中到一个统一平台实验里是合理的。
 
 当时需要同时探索 Chat / Custom GPT、Codex、本机 Runtime、Gateway、Task、Agent Assets、Context、Knowledge、Skills、外部知识平台和真实执行链。把它们放进同一个工程载体，可以快速建立共同语言、验证最小链路，并看见原本散落在不同工具里的问题其实互相影响。
 
@@ -126,7 +124,24 @@ Source / Spec / Test / Runtime Reality
 
 今天的 `proton-workspace` 不再被当成一个“大一统 AI 平台”。它是长期工程工作区和管理仓库，承载跨项目复用的 Tool、Automation、Skill、正式知识和静态资产；真正的产品继续保留在独立仓库里。
 
+### 先分清“脑子、眼睛、手”和治理
+
+如果只用一句话解释这套体系，可以先记住：
+
+> **脑子负责判断，眼睛负责看见现实，手负责改变现实；Task、Skill、Approval、Evidence 和 Recovery 负责让这些动作长期可控。**
+
+它们不是同一种能力。
+
+- **脑子**：ChatGPT Chat、固定 Agent Role 和其它模型能力。负责理解目标、分析、规划、判断下一步，不直接把“我认为完成了”当成现实事实。
+- **眼睛**：系统获得真实状态的能力。浏览器侧主要由 Playwright MCP 读取页面、DOM、截图和可见结果；工程侧还包括文件、Git、进程、日志和外部服务的 readback。眼睛的核心职责是回答：**现在真实发生了什么？**
+- **手**：系统真正改变现实的能力。本机侧包括 Local Dev 的文件写入、命令、Git 和进程操作；浏览器侧包括受控点击、输入、提交；稳定机械步骤进一步下沉到 Automation。手的核心职责是回答：**怎样把已经批准的动作真实执行出来？**
+- **治理与护栏**：Task / Runtime 保存长期状态，Skill 固化方法，Approval / Policy 约束高风险动作，Evidence / Readback 证明结果，Recovery 处理 timeout、UNKNOWN 和中断。它们保证“能看、能做”不会退化成盲操作。
+
+因此 CodeGraph 和 Repomix 更准确地属于**理解现实与构建工程上下文的辅助能力**，而不是“手”；Playwright 既可以作为眼睛观察页面，也可以在被授权时承担浏览器里的动作执行。
+
 ![智能体工程探索工作区示意图](../../assets/知识库/智能体工程探索工作区示意图.png)
+
+这张图表达的是整个工作区的分层：Chat 负责高价值判断，本机能力层提供观察、上下文和执行能力，真实产品各自拥有自己的业务事实，最后所有判断都必须回到真实工程结果。
 
 当前几个核心 Owner 可以这样理解：
 
@@ -139,6 +154,31 @@ Source / Spec / Test / Runtime Reality
 | **端侧模型** | 本地设备怎样作为受 Runtime 治理的推理节点提供语义计算 | 不拥有 Task 状态、系统流转权和真实副作用权限 |
 | **Skills / Tools / Automation** | 哪些方法值得复用、哪些能力可以原子调用、哪些机械流程应该确定性执行 | 不因为“跨项目可用”就变成产品事实 Owner |
 
+### 相关仓库
+
+| 工程 | 仓库 |
+|---|---|
+| proton-workspace | [sayhelloproton-eng/proton-workspace](https://github.com/sayhelloproton-eng/proton-workspace) |
+| ProFlow | [sayhelloproton-eng/proflow](https://github.com/sayhelloproton-eng/proflow) |
+| ProFlow RAG | [sayhelloproton-eng/proflow-rag](https://github.com/sayhelloproton-eng/proflow-rag) |
+| ChatWeb | 当前仅本地仓库，未配置远程 |
+| Job Search System | [sayhelloproton-eng/job-search-system](https://github.com/sayhelloproton-eng/job-search-system) |
+
+### 多智能体协作不是“多开几个窗口”
+
+如果从 ProFlow 的真实协作现场看，这套体系也不是“一个模型做所有事”。固定角色、长期 Task、现实观察和执行链必须同时存在。
+
+![ProFlow 多智能体协作与任务面板](../../assets/知识库/多智能体协作.png)
+
+这张图展示的是三个固定角色与 ProFlow Tasks 面板同时工作的一个切面：
+
+- **Product / Dev / Test 是不同责任，不是三个相同 Chat 的复制品。** Product 负责目标和 Requirement，Dev 负责实现，Test 负责独立验证；
+- **Task 面板保存长期任务事实。** Objective、Ordered Plan、Node 状态和结果不依赖某一个 Chat 的记忆；
+- **Agent 负责判断，眼睛负责看见真实状态，手负责执行真实动作。** 页面有没有变化、Task 有没有推进、执行有没有真正发生，都必须通过现实回读确认；
+- **ProFlow 负责把这些角色放进同一个长期闭环。** 它处理 binding、wake、execution、evidence、recovery 和任务状态，让一次协作可以跨窗口、跨失败继续。
+
+这张图真正想表达的不是“Agent 越多越高级”，而是：**角色分工、长期 Task、眼睛、手和治理必须一起存在，系统才从聊天升级成工程。**
+
 工作区内部也继续保持这种分工：
 
 - `repos/`：独立产品仓库，各自拥有自己的 Source / Spec / Test / Runtime；
@@ -146,11 +186,9 @@ Source / Spec / Test / Runtime Reality
 - `automation/`：适合确定性执行的多步骤机械流程；
 - `skills/`：方法、判断、工程协议和可复用经验；
 - `docs/`：研究、学习、项目材料和正式知识；
-- `assets/`：正式知识需要的长期静态资产。
+- `assets/`：正式知识需要的长期静态资产。这种拆分最后形成了一条很稳定的原则：
 
-这种拆分最后形成了一条很稳定的原则：
-
-> **模型负责判断，工具和 Runtime 负责执行，项目拥有产品事实，工作区拥有跨项目工程能力，正式知识负责解释这些实践。**
+> **模型负责判断，眼睛负责读取现实，工具和 Runtime 负责执行与状态，项目拥有产品事实，工作区拥有跨项目工程能力，正式知识负责解释这些实践。**
 
 ## 7. ChatGPT / Custom GPT 为什么曾经是第一代重要载体
 

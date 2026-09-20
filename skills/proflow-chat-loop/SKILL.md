@@ -11,7 +11,7 @@ description: ProFlow-only ChatGPT web Monitor shift loop for continuous engineer
 
 `/Users/agent/Desktop/proton-workspace/repos/proflow`
 
-Do not use it for ChatWeb, Job Search System, ai-agent-platform, or any other project.
+Do not use it for ChatWeb, Job Search System, or any other project.
 It owns ProFlow Chat-to-Chat continuation only; shared Engineering and Acceptance protocols keep their own authority.
 
 **Monitor Chat is a separate ChatGPT web chat inside the `学习` project.**

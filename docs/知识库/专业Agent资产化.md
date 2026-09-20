@@ -1,6 +1,6 @@
 # 专业 Agent 资产化：从一次性角色到可复用工程能力
 
-我最初把“专业 Agent”理解成一个配置问题：定义 Role、准备 Instructions 和 Knowledge、绑定 Tool 与 Policy，再补一套 Eval，最后发布到不同 Host。旧 `ai-agent-platform` 甚至把这条路完整推演成了 Role、Agent Profile、Knowledge Pack、Catalog、Release Registry 和 Publisher。
+我最初把“专业 Agent”理解成一个配置问题：定义 Role、准备 Instructions 和 Knowledge、绑定 Tool 与 Policy，再补一套 Eval，最后发布到不同 Host。第一代统一平台 甚至把这条路完整推演成了 Role、Agent Profile、Knowledge Pack、Catalog、Release Registry 和 Publisher。
 
 这些概念大多没有错，真正的问题出在顺序。真实项目还没有证明第二个、第三个 Agent 会怎样复用时，治理层已经开始变得比消费者更复杂；另一边，如果退回到“Prompt + 模型 + 一条会话”，一次任务又很容易跑通，却没有稳定身份、没有当前事实边界，也没有办法回答模型或环境变化以后为什么仍然值得信任。
 
@@ -235,7 +235,7 @@ Eval Harness 自己测错
 
 ## 第二次纠偏：完整平台设计可以正确，但仍然可能做早了
 
-旧 `ai-agent-platform` 对 Agent 资产的目标模型其实很完整：Role、Profile、Knowledge Pack、Capability、Tool Binding、Policy、Eval、Host Release、Catalog、Publisher 都有清楚位置。真正让我后来改变方向的，不是这些概念突然失效，而是**它们中的一部分还没有等到真实消费者，就已经开始产生治理成本。**
+第一代统一平台 对 Agent 资产的目标模型其实很完整：Role、Profile、Knowledge Pack、Capability、Tool Binding、Policy、Eval、Host Release、Catalog、Publisher 都有清楚位置。真正让我后来改变方向的，不是这些概念突然失效，而是**它们中的一部分还没有等到真实消费者，就已经开始产生治理成本。**
 
 当时已经规划固定 `agents/`、`knowledge-packs/`、Catalog、Release Registry 和 Publisher；如果未来真的有很多专业 Agent、多个 Host、机器发现、兼容性和跨产品发布需求，这些能力完全可能再次变得有价值。但在第二个稳定 Agent 都还没有证明复用关系时，提前维护多层 Schema、Registry 和映射，只会让“平台完整”变成自己的目标。
 

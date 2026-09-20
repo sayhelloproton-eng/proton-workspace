@@ -425,7 +425,7 @@ DDD 让我们能够问：
 
 这比单纯问“代码有没有被调用”更有价值。
 
-旧 `ai-agent-platform` 最终被拆掉，大量 Registry、全局 Asset ID、统一 Publisher 和过早平台化设计没有继续保留，也和这种判断一致：**可以抽象，不代表现在应该抽象。**
+第一代统一平台 最终被拆掉，大量 Registry、全局 Asset ID、统一 Publisher 和过早平台化设计没有继续保留，也和这种判断一致：**可以抽象，不代表现在应该抽象。**
 
 ## DDD 也有成本：边界一旦正式，就会产生 Change Amplification
 
