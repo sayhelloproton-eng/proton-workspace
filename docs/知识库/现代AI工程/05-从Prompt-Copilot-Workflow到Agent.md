@@ -36,6 +36,62 @@ Copilot（协作式 AI：在人的现有工作环境里给建议、生成或局�
 
 它的优势来自责任少：状态和权限边界简单，错误通常停留在局部候选。只有当人的主要工作变成不断替 AI 搬运文件、日志、环境结果并决定下一步时，才出现更强自动化的需求。
 
+## 为什么 Coding 场景很早就适合把 Copilot 推向 Agent
+
+Coding 是 Agent 工程很早成熟起来的场景之一，一个重要原因不是代码模型“几乎不会犯错”，而是软件工程环境提供了很高的 Feedback Density（反馈密度：一次动作以后，环境能够快速返回多少可验证的新信息）。
+
+一个仓库天然就有很多模型外部的反馈面：
+
+~~~text
+Repo / Source
+→ 当前事实
+
+Diff
+→ 到底改了什么
+
+Compiler / Typecheck
+→ 结构和类型是否成立
+
+Test
+→ 指定行为是否仍然满足
+
+Build
+→ 产物能否生成
+
+Git
+→ 版本、历史和可恢复边界
+
+Shell / Runtime
+→ 真实执行结果
+~~~
+
+于是 AI 可以形成比纯聊天更扎实的闭环：
+
+~~~text
+observe repository
+→ propose / edit
+→ compile / test / run
+→ read failure or diff
+→ revise
+→ verify again
+~~~
+
+这解释了为什么代码补全会自然向 IDE Chat、Tool-using Coding Agent、Task delegation 和长期工程 Runtime 演进：每往前一步，模型都能获得比“自我评价”更强的外部反馈。
+
+但高反馈环境并不意味着可以取消控制。Compiler PASS 不能证明业务目标完成，Test 只证明它覆盖的行为，Diff 只证明文件发生变化；而一旦 Shell、Git、网络和发布能力开放，Blast Radius（影响半径：一次错误动作可能波及的真实范围）也会同步增大。
+
+因此 Coding Agent 的优势来自：
+
+~~~text
+开放问题
++ 高密度外部反馈
++ 可隔离执行环境
++ 可审阅 Diff
++ 可重复验证
+~~~
+
+而不是来自“把整个仓库交给模型自由发挥”。更完整的软件工程产品边界继续由 [Coding Agent](../Coding-Agent.md) 展开。
+
 ## Chain：路径固定，模型只是其中一个函数
 
 Chain（链式调用）适合几个步骤按固定顺序执行：
