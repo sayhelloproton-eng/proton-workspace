@@ -12,7 +12,7 @@ Capability、Permission、Identity、Autonomy 经常被混在一起。把它们�
 
 几个相邻问题由别的 Owner 负责：
 
-- Agent、Skill、Tool、Script、Workflow、Permission 和 Policy 分别应该放在哪一层，由[Agent、Skill、Tool、Script 与 Workflow 的职责边界](../Agent-Skill-Tool-Workflow职责边界.md)完整解释；
+- Agent、Skill、Tool、Script、Workflow、Permission 和 Policy 分别应该放在哪一层，由[Agent、Skill、Tool、Script 与 Workflow 的职责边界](../Agent工程/Agent-Skill-Tool-Workflow职责边界.md)完整解释；
 - 一个真实副作用已经开始以后，timeout、UNKNOWN、readback 和 safe retry 怎样处理，由[长期 Agent 怎样安全执行和恢复](../现代AI工程/09-长期Agent怎样安全执行和恢复.md)负责；
 - Prompt Injection、不可信数据、Tool Output 和供应链怎样攻击这些边界，由下一篇[Prompt Injection、数据与 Tool 风险怎样被系统控制](./09-Prompt-Injection数据与Tool风险怎样被系统控制.md)负责。
 

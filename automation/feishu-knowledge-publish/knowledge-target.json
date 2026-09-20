@@ -1,0 +1,25 @@
+{
+  "contract": "feishu-knowledge-target.v3",
+  "name": "智能体工程知识库",
+  "sourceRoot": "docs/知识库",
+  "spaceId": "7666702110519495945",
+  "identity": "user",
+  "manageEntireSpace": true,
+  "firstDocument": {
+    "title": "智能体工程探索",
+    "nodeToken": "PnUWwEvDoiAV3AksqtDcWqLAnaf",
+    "source": "README.md",
+    "childrenSource": "ProFlow",
+    "ignoreChildren": ["README.md"]
+  },
+  "managedTopLevel": [
+    { "title": "智能体工程探索", "kind": "firstDocument" },
+    { "title": "现代 AI 工程", "source": "现代AI工程" },
+    { "title": "Agent 工程", "source": "Agent工程" },
+    { "title": "工程工具与运行时", "source": "工程工具与运行时" },
+    { "title": "ProFlow RAG", "source": "ProFlow-RAG" },
+    { "title": "ChatWeb", "source": "ChatWeb" },
+    { "title": "AI 业务工程", "source": "AI业务工程" },
+    { "title": "智能体工程术语表", "source": "智能体工程术语表" }
+  ]
+}

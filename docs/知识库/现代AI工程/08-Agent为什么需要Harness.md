@@ -368,7 +368,7 @@ Harness 可以 Normalization，但必须保留可观察边界。
 
 代码环境同时具备复杂语义和高密度确定性反馈：Repo、Symbol、Shell、Test、Build、Diff、Git 都可以被回读。
 
-因此 Coding Agent 产品的差异经常不只来自模型，而来自 Context Assembly、Tool Surface、Workspace、Feedback Density、Validator 和 Task UI 如何组成 Harness。更完整的专题见 [Coding Agent 真正竞争的是什么](../Coding-Agent.md)。
+因此 Coding Agent 产品的差异经常不只来自模型，而来自 Context Assembly、Tool Surface、Workspace、Feedback Density、Validator 和 Task UI 如何组成 Harness。更完整的专题见 [Coding Agent 真正竞争的是什么](../工程工具与运行时/Coding-Agent.md)。
 
 ## Harness 和 Runtime 最终怎样分工
 

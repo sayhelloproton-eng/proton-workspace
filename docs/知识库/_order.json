@@ -1,0 +1,30 @@
+{
+  "contract": "knowledge-order.v2",
+  "topLevel": [
+    "智能体工程探索",
+    "现代 AI 工程",
+    "Agent 工程",
+    "工程工具与运行时",
+    "ProFlow RAG",
+    "ChatWeb",
+    "AI 业务工程",
+    "智能体工程术语表"
+  ],
+  "children": {
+    "Agent工程": [
+      "Agent-Skill-Tool-Workflow职责边界.md",
+      "Agent系统边界建模.md",
+      "Task工程.md",
+      "上下文工程.md",
+      "知识资产治理.md",
+      "专业Agent资产化.md",
+      "Agent工程复杂度与边界.md",
+      "Agent项目治理.md"
+    ],
+    "工程工具与运行时": [
+      "Coding-Agent.md",
+      "本机Agent工具链.md",
+      "端侧模型.md"
+    ]
+  }
+}

@@ -1,123 +1,57 @@
 # Feishu Publish Contract
 
-## Source of truth
+## Authority
 
-这个 Skill 不复制一套固定 CLI API。每次真实发布以当前环境中的官方 `lark-cli` 为准：
+正文 Truth 是 docs/知识库 与 assets/知识库。远端 Wiki 是单向 Projection。knowledge-target.json 是 deployment config，不是内容 Registry。正常模型不读底层 CLI 手册；automation 失败时才以当前 lark-cli --help 和真实远端 readback 诊断。
 
-```text
-lark-cli --version
-lark-cli <domain> <command> --help
-lark-cli skills read lark-doc/...
-lark-cli skills read lark-drive/...
-```
+## Deployment target v3
 
-版本号只用于诊断，不是永久契约。
+config 固定 sourceRoot、spaceId、identity、manageEntireSpace、firstDocument 与 managedTopLevel。
 
-本地正式知识 Markdown 是正文真源。通常使用 workspace `docs/知识库/` 作为 `--source-root`；其它学习、研究、项目和临时材料只有在被提炼进正式知识树后才进入发布面。
+Space 本身没有“知识库根文档”语义。firstDocument.nodeToken 只负责身份锚定；其它一级节点都是 Space 顶级 sibling。
 
-## 当前已验证命令面
+managedTopLevel 与 docs/知识库/_order.json 的 knowledge-order.v2.topLevel 必须完全一致，否则 fail closed。
 
-当前本机 `lark-cli 1.0.95` 已验证存在：
+## Desired tree
 
-```text
-wiki +node-get
-wiki +node-list
-wiki +node-create
-docs +fetch
-docs +update
-drive +upload
-```
+Automation 先构建 LOCAL DESIRED TREE，再读取 REMOTE CURRENT TREE。
 
-知识库投影不再依赖旧 `lark_read.mjs`、`lark_write.mjs`、Registry 或 Stable ID。
+目录 README 只作为目录节点正文；普通 Markdown 的第一个 H1 是文章节点标题。一级导航标题由 deployment config 固定。
 
-## 节点身份
+发布正文时剥离 Markdown 首个 H1，让 Wiki node title 与 body 解耦，避免长 README 标题把稳定导航标题改写。
 
-发布时只需要区分三件事：
+firstDocument.childrenSource 可以把一个本地目录的普通文章 flatten 到首文档下面；ignoreChildren 可以保留仅本地使用的综述而不生成远端节点。
 
-- Wiki space；
-- parent node；
-- 当前节点 token / obj token。
+## Command semantics
 
-`wiki +node-list` 用于列出某个 space 或 parent 下的直接子节点；需要完整分页时显式使用 `--page-all`。`wiki +node-get` 用于确认一个 node / object token 的真实节点信息。
+plan：只读 desired/current/diff，输出 create/move/delete 计划。
 
-本地相对路径是人的稳定定位方式，远端 token 是本次执行的运行时事实。不要把 token 反写成本地 Markdown 当长期身份系统。
+sync --changed：从 Git 当前变化推导 body scope。正文新增可以创建节点；如果检测到删除、order 改变或需要 re-parent，则 BLOCKED 并要求 reconcile。
 
-## Directory-as-document projection
+sync --all：保证全部 desired 节点存在并覆盖全部正文，但不 move、不 delete。遇到同名节点位于错误父级时 BLOCKED，而不是制造第二份副本。
 
-飞书 Wiki 的一个节点可以同时有正文和子节点，本地文件系统目录本身却不能承载正文。因此正式投影采用“目录 + README.md”表示一个知识节点：
+reconcile --all：先收敛 managed tree，再覆盖全部正文。每篇 overwrite 后立即 readback 并验证 fingerprint / images；全部正文完成后只做最终 tree readback，不再重复执行全量正文 fetch。
 
-```text
-source-root/
-├── README.md
-└── 项目实践/
-    ├── README.md
-    └── ProFlow/
-        ├── README.md
-        └── 调度与失败恢复.md
-```
+verify：只读检查 tree/content/images；这是唯一主动执行全量正文 readback 的命令。manageEntireSpace=true 时，Space 内任何不在 desired tree 的节点都属于 stale。
 
-投影为：
+## Readback evidence
 
-```text
-<root Wiki node>                   ← source-root/README.md
-└── 项目实践                       ← 项目实践/README.md
-    └── ProFlow                    ← ProFlow/README.md
-        └── 调度与失败恢复          ← 调度与失败恢复.md
-```
+一次成功的 post-write readback 同时证明该正文内容和图片已经被远端采用，因此它可以直接作为 reconcile / sync 的终态正文证据。再次对同一批正文全量 fetch 不增加新的 authority，只增加远端延迟。
 
-规则：
+receipt.readback 固定暴露：
+- docFetchCalls：本次命令全部 docs fetch 调用；
+- imageReuseFetches：写前仅用于图片 token reuse 的 fetch；
+- postWriteFetches：写后终态验证 fetch；
+- fullVerifyFetches：显式 verify 的全量扫描 fetch。
 
-- **Directory = Wiki Node**：目录名决定节点层级和默认标题；
-- **Directory/README.md = Wiki Node Body**：README 不创建额外子节点，而是覆盖对应目录节点正文；
-- **ordinary Markdown = Child Wiki Node**：普通 `xxx.md` 创建 / 复用同级 `xxx` 子节点，并覆盖其正文；
-- **root README requires root node**：发布 `source-root/README.md` 时必须显式提供 `--root-node-token`；缺失时 fail closed，绝不创建 `README` 页面；
-- 目录没有 README 也可以作为纯导航节点存在，只要其下有需要发布的后代节点；
-- README 只是本地适配文件名，不是知识标题，也不出现在远端导航树中。
+正常全量 reconcile 的 fullVerifyFetches 必须为 0；显式 verify 才允许大于 0。BLOCKED receipt 也保留这组指标，方便定位首个 divergence 前已经发生的 readback。
 
-这不是额外 Registry，也不是第二套映射表；节点关系直接从本地知识树和本轮远端导航事实推导。
+## Sibling order boundary
 
-## 正文覆盖
+_order.json 是 sibling order 的唯一 Owner：topLevel 固定 Space 一级顺序，children 可为去掉数字前缀的目录显式声明直接子节点顺序。声明 children 时必须完整覆盖该目录全部可发布直接 child，否则 fail closed。
 
-已有或刚创建的 docx 节点统一使用：
-
-```bash
-lark-cli docs +update \
-  --doc <obj-or-node-token> \
-  --command overwrite \
-  --doc-format markdown \
-  --content @./publish.md
-```
-
-多行正文优先 `@file`，避免 shell 转义破坏。`@file` 必须使用当前 cwd 下的安全相对路径。
-
-目录 README 与普通文章进入正文覆盖阶段后没有区别：最终都 overwrite 已解析出的目标 Wiki 节点。图片资源必须先上传到调用者 Drive，再由临时发布正文引用返回的 `file_token`；不要用 `--wiki-token` 把图片挂到知识节点下面，否则图片文件会进入 Wiki 导航树。
-
-## 不读旧正文
-
-发布语义是：
-
-```text
-local body = desired state
-remote body = replaceable projection
-```
-
-所以 overwrite 前不 `docs +fetch` 旧正文，不做 Markdown diff，不做模型语义 merge，也不逐块更新。
-
-节点树读取不属于“旧正文比较”，可以且应该在批量开始时完成。
-
-## 写后最小验证
-
-写后允许轻量 `docs +fetch` 或节点查询确认：
-
-- 节点仍在预期父路径；
-- README 没有被错误发布成名为 `README` 的远端子节点；
-- 图片资源没有成为 Wiki 导航子节点；
-- 文档出现预期标题 / 首段等基本指纹；
-- CLI 没有资源 warning / partial failure；
-- 图片文章的 token-backed 图片没有失败。
-
-验证 side effect 即可，不需要重新把远端全文与本地逐字比较。
+当前 Wiki Move contract 没有 sibling position 参数。reconcile --all 遇到无法原地精确收敛的结构或 sibling order 时，不让模型手工拖拽，也不通过标题数字前缀污染正式标题；它保留 firstDocument anchor，删除并按 desired traversal 重建其余 managed projection。因为飞书只是 Projection，普通远端 node token 不作为长期 Stable ID。
 
 ## External write boundary
 
-Help、内置 Skill、`--dry-run`、`plan` 和只读节点查询可以用于 Skill 自测。真正的 `node-create`、`drive +upload`、`docs +update` 都是外部写；必须由当前任务授权覆盖，不能因为“在开发发布 Skill”就自动获得写权限。
+plan/verify 只读。sync/reconcile 会产生外部写，必须有当前任务授权。reconcile 还包含高风险 node-delete；调用 reconcile --all 表示本轮已明确授权 managed tree 的结构性对齐。

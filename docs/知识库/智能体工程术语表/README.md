@@ -45,13 +45,13 @@ L7 Eval / Observability / Routing / Platform
 
 | 层 | 入口 | 条目数 | 你读完应该能回答 |
 |---|---|---:|---|
-| L0-L1 | [基础系统与模型](./术语表/01-基础系统与模型.md) | 86 | 模型和系统底座到底怎样运行？ |
-| L2 | [Context、Memory、RAG 与知识](./术语表/02-Context-Memory-RAG与知识.md) | 85 | 模型这一轮该看到什么，知识从哪里来？ |
-| L3 | [Tool、MCP 与外部能力](./术语表/03-Tool-MCP与外部能力.md) | 66 | 模型怎样接入和改变真实世界？ |
-| L4 | [Agent、Runtime 与 Harness](./术语表/04-Agent-Runtime与Harness.md) | 58 | 一次回答怎样变成长任务？ |
-| L5 | [Workflow、Subagent 与 Multi-Agent](./术语表/05-Workflow-Subagent与Multi-Agent.md) | 69 | 什么时候写死路径，什么时候拆 Agent？ |
-| L6 | [长期执行、恢复、权限与治理](./术语表/06-长期执行恢复权限与治理.md) | 64 | 副作用、超时、重启怎样安全恢复？ |
-| L7 | [Eval、可观测性、路由与平台](./术语表/07-Eval可观测性路由与平台.md) | 92 | 怎样证明质量、定位失败并平台化？ |
+| L0-L1 | [基础系统与模型](./01-基础系统与模型.md) | 86 | 模型和系统底座到底怎样运行？ |
+| L2 | [Context、Memory、RAG 与知识](./02-Context-Memory-RAG与知识.md) | 85 | 模型这一轮该看到什么，知识从哪里来？ |
+| L3 | [Tool、MCP 与外部能力](./03-Tool-MCP与外部能力.md) | 66 | 模型怎样接入和改变真实世界？ |
+| L4 | [Agent、Runtime 与 Harness](./04-Agent-Runtime与Harness.md) | 58 | 一次回答怎样变成长任务？ |
+| L5 | [Workflow、Subagent 与 Multi-Agent](./05-Workflow-Subagent与Multi-Agent.md) | 69 | 什么时候写死路径，什么时候拆 Agent？ |
+| L6 | [长期执行、恢复、权限与治理](./06-长期执行恢复权限与治理.md) | 64 | 副作用、超时、重启怎样安全恢复？ |
+| L7 | [Eval、可观测性、路由与平台](./07-Eval可观测性路由与平台.md) | 92 | 怎样证明质量、定位失败并平台化？ |
 
 ## 一条完整的 Agent 工程主链
 

@@ -23,7 +23,7 @@ Agent 安全最容易被低估的地方，是把风险理解成“用户写了�
 
 ## 这篇文章拥有“威胁怎样穿过边界”这一层
 
-上一篇[Agent 的身份、权限和自治边界](./08-Agent的身份权限和自治边界怎样设计.md)已经负责“谁能做什么、什么风险需要审批”。[Agent、Skill、Tool、Script 与 Workflow 的职责边界](../Agent-Skill-Tool-Workflow职责边界.md)负责 Permission / Policy / Tool 应该落在哪个对象；[长期 Agent 怎样安全执行和恢复](../现代AI工程/09-长期Agent怎样安全执行和恢复.md)负责真实 Effect 发生后的 UNKNOWN 与 Recovery。
+上一篇[Agent 的身份、权限和自治边界](./08-Agent的身份权限和自治边界怎样设计.md)已经负责“谁能做什么、什么风险需要审批”。[Agent、Skill、Tool、Script 与 Workflow 的职责边界](../Agent工程/Agent-Skill-Tool-Workflow职责边界.md)负责 Permission / Policy / Tool 应该落在哪个对象；[长期 Agent 怎样安全执行和恢复](../现代AI工程/09-长期Agent怎样安全执行和恢复.md)负责真实 Effect 发生后的 UNKNOWN 与 Recovery。
 
 这一篇不重新拥有那些机制，只追攻击链：**低信任内容怎样试图升级成控制指令，数据、Memory、Tool、Connector 和网络怎样扩大后果，以及系统怎样通过多层硬边界限制 blast radius。**
 

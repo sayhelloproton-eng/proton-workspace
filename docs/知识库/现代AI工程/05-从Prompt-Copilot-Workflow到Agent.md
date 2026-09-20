@@ -90,7 +90,7 @@ observe repository
 + 可重复验证
 ~~~
 
-而不是来自“把整个仓库交给模型自由发挥”。更完整的软件工程产品边界继续由 [Coding Agent](../Coding-Agent.md) 展开。
+而不是来自“把整个仓库交给模型自由发挥”。更完整的软件工程产品边界继续由 [Coding Agent](../工程工具与运行时/Coding-Agent.md) 展开。
 
 ## Chain：路径固定，模型只是其中一个函数
 
@@ -341,7 +341,7 @@ Code Completion
 
 真正增加的不是“模型会写更多代码”，而是 Runtime、State、Isolation、Recovery 和 Verification。
 
-专题可继续读 [Coding Agent 真正竞争的是什么](../Coding-Agent.md)。
+专题可继续读 [Coding Agent 真正竞争的是什么](../工程工具与运行时/Coding-Agent.md)。
 
 ## 什么时候应该主动停在更简单的架构
 
@@ -360,4 +360,4 @@ deterministic business boundary
 
 如果单 Agent 已经能闭环，也没有必要为了“多个角色”直接升级 Multi-Agent。
 
-更完整的复杂度升降判断见 [Agent 工程复杂度与边界](../Agent工程复杂度与边界.md)。下一篇进入时间尺度变化：**一次模型调用可以结束，但 Task 为什么不能跟着消失。**
+更完整的复杂度升降判断见 [Agent 工程复杂度与边界](../Agent工程/Agent工程复杂度与边界.md)。下一篇进入时间尺度变化：**一次模型调用可以结束，但 Task 为什么不能跟着消失。**

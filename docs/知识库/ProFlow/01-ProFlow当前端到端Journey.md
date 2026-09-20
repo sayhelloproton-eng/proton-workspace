@@ -1,4 +1,4 @@
-# ProFlow 当前端到端 Journey：从产品目标到真实交付，再回到下一轮
+# ProFlow 当前端到端 Journey
 
 第一次从外部看 ProFlow，很容易先看到 Custom GPT、Browser Extension、模型运行时和一组 Task API，然后把它理解成“一个工具很多的多 Agent 平台”。
 

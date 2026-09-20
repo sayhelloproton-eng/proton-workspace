@@ -186,7 +186,9 @@ Source / Spec / Test / Runtime Reality
 - `automation/`：适合确定性执行的多步骤机械流程；
 - `skills/`：方法、判断、工程协议和可复用经验；
 - `docs/`：研究、学习、项目材料和正式知识；
-- `assets/`：正式知识需要的长期静态资产。这种拆分最后形成了一条很稳定的原则：
+- `assets/`：正式知识需要的长期静态资产。
+
+这种拆分最后形成了一条很稳定的原则：
 
 > **模型负责判断，眼睛负责读取现实，工具和 Runtime 负责执行与状态，项目拥有产品事实，工作区拥有跨项目工程能力，正式知识负责解释这些实践。**
 
@@ -265,24 +267,26 @@ Runtime Reality / External Readback
 
 历史材料仍然重要，因为它可以解释为什么某个机制出现、为什么某条路线被替代、哪些错误不应该重走；但历史不能因为写得更完整，就覆盖今天的实现。
 
-## 10. 正式知识入口
+## 10. 正式阅读顺序
 
-如果第一次进入这套体系，可以按问题选择入口，而不需要从头读完全部文档。
+这套知识有一条明确主线。**本文就是第 01 篇，ProFlow 固定为第 02 篇。** 先看到真实问题和主要成果，再逐层拆开它背后的工程机制，最后回到其它产品、业务工程和术语 Reference。
 
-- [现代 AI 工程：从模型智能到长期 Agent 系统](./现代AI工程/README.md)：从模型、外部知识、Tool、Agent、Runtime、Multi-Agent 一路建立整套技术心智模型；
-- [AI 业务工程：从“能用 AI”到“把 AI 变成长期业务能力”](./AI业务工程/README.md)：继续讨论场景选择、成本、Eval、生产可观测性、变更、安全、资产化和平台能力；
-- [专业 Agent 资产化](./专业Agent资产化.md)：解释 Role、运行实例、Harness、Eval 与 Behavior Release 怎样组成可复用专业 Agent；
-- [上下文工程](./上下文工程.md)：解释 State、Context、Memory、Knowledge、RAG 与 Runtime Reality 怎样被编译成当前 Agent 真正需要的输入；
-- [知识资产治理](./知识资产治理.md)：解释 Claim、Evidence、事实强度、修订、取代、发布和退役，以及为什么最终选择“轻映射、重提炼”；
-- [Task 工程](./Task工程.md)：解释 Goal、Plan、Task、Execution、Handoff、Integration 与 Completion 怎样保护长期意图；
-- [Agent 项目治理](./Agent项目治理.md)：解释多个 Task 和 Fact Owner 怎样形成可信阶段基线，而不是依赖进度汇报；
-- [Agent 系统边界建模](./Agent系统边界建模.md)：解释为什么长期 Agent 系统需要明确领域、身份、Authority 和 Provider 边界；
-- [Agent 工程复杂度与边界](./Agent工程复杂度与边界.md)：回答什么时候值得升级复杂度，什么时候应该主动降级；
-- [Agent、Skill、Tool、Script 与 Workflow 的职责边界](./Agent-Skill-Tool-Workflow职责边界.md)：回答判断、方法、能力、确定执行和长期状态分别应该由谁负责；
-- [本机 Agent 工具链](./本机Agent工具链.md)：记录 Chat 如何通过本机事实工具、Skill 和 Automation 进入真实工程环境；
-- [端侧模型](./端侧模型.md)：记录端侧模型怎样从实验对象收敛成受 Runtime 治理的本地推理节点；
-- [Coding Agent](./Coding-Agent.md)：持续整理 Coding Agent、Harness、Runtime、Workspace 与生态边界；
-- [智能体工程术语表](./术语表.md)：统一 Agent、Runtime、Task、State、Context、Memory、Skill、Tool、Evidence 等跨项目稳定语言；
-- [ProFlow](./ProFlow/README.md)、[ProFlow-RAG](./ProFlow-RAG/README.md)、[ChatWeb](./ChatWeb/README.md)：从长期知识回到三个真实项目的工程实践与证据。
+02. [ProFlow](./ProFlow/README.md)：主要产品和工程成果。先看真实系统怎样把长期 Task、多 Agent、Control Plane、浏览器执行、恢复和真实交付放进同一个闭环。
+03. [现代 AI 工程](./现代AI工程/README.md)：给刚看过 ProFlow 的复杂对象补一张完整技术地图，从模型、外部知识、Tool 一路走到 Runtime、Multi-Agent、Eval 与 Platform。
+04. [Agent、Skill、Tool、Script 与 Workflow 的职责边界](./Agent工程/Agent-Skill-Tool-Workflow职责边界.md)：先分清判断、方法、原子能力、确定执行和长期状态分别应该由谁负责。
+05. [Agent 系统边界建模](./Agent工程/Agent系统边界建模.md)：继续回答领域、身份、Authority、Provider 与运行边界为什么必须拆清。
+06. [Task 工程](./Agent工程/Task工程.md)：解释 Goal、Plan、Task、Execution、Handoff、Integration 与 Completion 怎样保护长期意图。
+07. [上下文工程](./Agent工程/上下文工程.md)：解释 State、Context、Memory、Knowledge、RAG 与 Runtime Reality 怎样被编译成当前 Agent 真正需要的输入。
+08. [知识资产治理](./Agent工程/知识资产治理.md)：解释 Claim、Evidence、事实强度、修订、取代、发布和退役，以及为什么最终选择“轻映射、重提炼”。
+09. [专业 Agent 资产化](./Agent工程/专业Agent资产化.md)：解释 Role、运行实例、Harness、Eval 与 Behavior Release 怎样组成可复用专业 Agent。
+10. [Agent 工程复杂度与边界](./Agent工程/Agent工程复杂度与边界.md)：回答什么时候值得升级复杂度，什么时候应该主动降级。
+11. [Agent 项目治理](./Agent工程/Agent项目治理.md)：解释多个 Task 和 Fact Owner 怎样形成可信阶段基线，而不是依赖进度汇报。
+12. [Coding Agent](./工程工具与运行时/Coding-Agent.md)：把前面的长期 Agent 方法放回 Coding Agent、Harness、Runtime 与 Workspace 生态。
+13. [本机 Agent 工具链](./工程工具与运行时/本机Agent工具链.md)：解释 Chat 怎样获得工程里的“眼睛和手”，通过 Tool、Skill 与 Automation 进入真实本机环境。
+14. [端侧模型](./工程工具与运行时/端侧模型.md)：解释本地设备怎样从模型实验对象收敛成受 Runtime 治理的推理节点。
+15. [ProFlow RAG](./ProFlow-RAG/README.md)：用独立 Knowledge Capability 验证 Snapshot、Retrieval、Evidence、Context、Citation、Eval 与 Maintenance。
+16. [ChatWeb](./ChatWeb/README.md)：看一个独立 Web Chat 产品怎样组织 Conversation、Streaming、Provider、Search、多模态和交付边界。
+17. [AI 业务工程](./AI业务工程/README.md)：在真实系统之后再讨论场景价值、成本、Eval、Observability、Incident、Security、资产化、平台化和组织飞轮。
+18. [术语表](./智能体工程术语表/README.md)：作为 Reference 放在主线末尾；任何阶段遇到概念不清都可以随时回查，不需要等到最后才使用。
 
 这里不追求“文档越多越完整”。一个主题只有在已经从过程材料中提炼出稳定问题、机制、取舍、证据和边界以后，才进入正式知识入口；需要追溯更早的路线和原始材料时，再回到 Git 历史和对应项目 Evidence。

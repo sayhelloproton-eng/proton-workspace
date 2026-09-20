@@ -67,7 +67,7 @@ Generate
 
 这条路线最终从 Completion 继续演进到 Coding Agent、Task、isolated workspace 和长期 Agent Workspace。
 
-专题可继续读：[Coding Agent 真正竞争的是什么](../Coding-Agent.md)。
+专题可继续读：[Coding Agent 真正竞争的是什么](../工程工具与运行时/Coding-Agent.md)。
 
 ## 2022｜ChatGPT：Base Model 变成可交互助手
 
