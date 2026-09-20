@@ -425,6 +425,53 @@ recovery success
 
 如果并行减少 20% 执行时间，却增加 2 倍 Token、更多人工 Review 和更高冲突率，它未必是更好的系统。
 
+## 长期 Eval 不只评单个 Agent，还应该学习“什么组织组合更有效”
+
+Multi-Agent 系统如果只给每个 Agent 单独打分，会漏掉一个更重要的问题：**同一类任务究竟应该由一个主体完成、拆一个 bounded Subagent，还是需要真正独立的多个责任主体。**
+
+可以把这种经验理解成 Organizational Capability Map（组织能力地图：用历史任务结果描述“哪类任务在什么责任组合下更有效”的经验模型）。它不是必须建设的一张中央 Registry，也不是行业标准对象，而是一种长期 Eval 视角。
+
+例如：
+
+~~~text
+普通局部 Bug
+→ Developer
+
+需要独立检索大量资料
+→ Developer + Research Subagent
+
+Browser + Source 同时变化
+→ Developer + Browser capability / specialist
+
+高风险发布
+→ Developer + Independent Test + Deployment gate
+
+跨独立 Runtime / 组织协作
+→ 才考虑真正 Independent Agent / A2A
+~~~
+
+真正有价值的数据不是“哪个 Agent 自报擅长什么”，而是：
+
+~~~text
+Task Slice
++ responsibility topology
++ actual Outcome
++ coordination cost
++ failure mode
+→ 下一次组织选择的 Evidence
+~~~
+
+于是组织设计也形成闭环：
+
+~~~text
+real task outcomes
+→ compare organizational patterns
+→ update routing / delegation policy
+→ next task uses a better responsibility combination
+~~~
+
+这里的目标不是让系统越来越动态，而是让它逐渐知道**什么时候不该增加 Agent**。如果长期数据反复证明单 Agent + Tool 更便宜、更快、更可靠，就应该主动收缩组织，而不是继续维护“已经建好的”多 Agent 拓扑。
+
 ## 系统过度复杂时可以反向收缩
 
 ~~~text

@@ -50,6 +50,67 @@ Complete / Reopen / Follow-up
 
 ProFlow 后来真正稳定下来的不是某个固定 Task Schema，而是这条责任链：**模型负责理解、规划和判断；Task Owner 负责长期事实；执行器只能在冻结合同内行动；现实结果必须经过 Evidence 和 Owner 才能改变 Task Truth。**
 
+## 先把三条线分开：目标与决策、任务与执行、状态与证据
+
+旧工作流体系里有一个很值得保留的简化：长期工程不能把所有内容都塞进一条“任务进度”里，至少要把三条线分开。
+
+**目标与决策线**回答：
+
+~~~text
+为什么做？
+真正的问题是什么？
+目标状态是什么？
+Scope / Non-scope 是什么？
+哪些方案被选择或拒绝？
+什么时候发生 Plan Freeze？
+~~~
+
+这条线主要由 Product / Project Owner、Planner、架构 Owner 等决策主体负责。
+
+**任务与执行线**回答：
+
+~~~text
+哪一份工作被正式承诺？
+谁负责？
+允许使用什么 Capability？
+在哪个 Workspace / Lane 执行？
+怎样验证和集成？
+~~~
+
+它从 Task Contract 进入具体执行世界。
+
+**状态与证据线**回答：
+
+~~~text
+现在到底发生了什么？
+当前 Task / Execution 在什么状态？
+哪些 Effect 已确认？
+哪些 Approval 成立？
+哪份 Evidence 支撑完成声明？
+~~~
+
+它必须依赖 Task Owner、Execution、Evidence、Runtime 和真实 Readback，而不是依赖 Planner 或 Executor 的自然语言总结。
+
+三条线可以互相引用，但不能互相冒充：
+
+~~~text
+Plan says "should deploy"
+≠ Deployment happened
+
+Executor says "done"
+≠ Task completed
+
+Test passed
+≠ Product Goal satisfied
+
+Project wants to continue
+≠ Current Task scope may silently expand
+~~~
+
+这个分离保护的是一个非常基础的工程纪律：**意图、执行和现实必须能分别追溯。**
+
+它也解释了为什么后面的 Task Contract、Execution Gate、Result / Evidence、Project Baseline 都需要独立对象。真正复杂的长期任务不是缺一个更大的 Workflow Engine，而是这三条线一旦混在一起，任何摘要都可能同时改写“想做什么、做了什么、实际上发生了什么”。
+
 在当前 ProFlow 的真实建模里，这套方案还进一步落到了具体对象上：一个 Task 保留总目标和长期身份，Product / Dev / Test 以受控 Node 承担不同阶段责任；TaskRoleBinding（任务角色绑定：把长期 Role 和这个 Task 中的固定 Worker 对应起来）保证 Chrome refresh、Extension reload 或 Node reopen 不会凭空创建第二个执行者；runNo 只表示新的执行轮次，不改变原 Task、Node 和长期责任。这样失败历史、恢复历史和当前执行可以同时成立，而不会因为 Conversation 或 Tab 改变就重建整个任务世界。
 
 ## Goal 不是 Task，Plan 也不是 Task
