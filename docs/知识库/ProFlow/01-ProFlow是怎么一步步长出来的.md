@@ -1,26 +1,45 @@
-# ProFlow 各领域流程：从产品目标到真实交付，再回到下一轮
+# ProFlow 当前端到端 Journey：从产品目标到真实交付，再回到下一轮
 
-第一次从外部看 ProFlow，很容易先看到 Custom GPT、Browser Extension、MCP、模型运行时和一堆 Task API，然后把它理解成“一个工具很多的多 Agent 平台”。真正决定系统形状的不是工具数量，而是**一个产品目标进入以后，哪些事实由谁拥有、怎样推进到真实执行、失败后怎样恢复、完成后怎样决定下一轮。**
+第一次从外部看 ProFlow，很容易先看到 Custom GPT、Browser Extension、模型运行时和一组 Task API，然后把它理解成“一个工具很多的多 Agent 平台”。
 
-这篇文章只做一件事：沿一条端到端 Journey（完整业务旅程：从产品目标进入系统一直走到真实结果和下一轮）把当前五个领域串起来。具体技术专题交给 02～07 深挖，避免这里再变成第二份规格书。
+真正决定系统形状的不是工具数量，而是：
+
+> **一个产品目标进入以后，哪些事实由谁拥有，怎样推进到真实执行，失败后怎样恢复，完成后怎样决定下一轮。**
+
+这篇文章只负责建立**当前系统心智模型**。它沿一条端到端 Journey 把 Task、Agent、Execution、Model、Deployment 五个领域以及外层 Monitor 串起来。
+
+它不是 ProFlow 的历史演进史。为什么早期方案失败、Phase 2 / Phase 3 为什么重写、哪些事故塑造了今天的边界，请回到 [ProFlow 总览](./README.md) 和 [历史证据与决策档案](./历史证据与决策档案.md)。
+
+同样需要注意：本文解释的是当前长期机制和已接受的系统边界，不维护实时项目进度。某个能力今天是否已经实现、发布、安装、启用或通过真实验收，必须回到 `repos/proflow` 的 Spec / Source / Test / Runtime / CURRENT 判断。
 
 ![ProFlow 全景架构图（双飞轮）](../../../assets/知识库/ProFlow全景架构图-双飞轮.png)
 
 ## 先建立一个判断框架：事实、决定权、执行权不是一回事
 
-ProFlow 最重要的设计原则是 Fact Owner（事实归属方：某类正式可变事实唯一可信来源）。一个组件可以观察事实、请求动作甚至执行动作，但不因此自动拥有改变业务结论的资格。
+ProFlow 最重要的设计原则是 Fact Owner（事实归属方：某类正式可变事实唯一可信来源）。
 
-当前系统把长期事实拆成五个领域：
+一个组件可以：
+
+- 观察事实；
+- 请求动作；
+- 执行动作；
+- 把结果送给别的组件；
+
+但这些能力都不自动意味着它有资格改变业务结论。
+
+当前实施规范把长期事实拆成五个领域：
 
 | 领域 | 它真正拥有的事实 | 典型问题 |
 | --- | --- | --- |
-| Task / 任务与编排 | Task、Node、`runNo`、TaskRoleBinding、TaskDocument、TaskGroup、Campaign、Product Intent | 当前工作做到哪里？下一 Node 是谁？这份 Task 是否允许开始？ |
-| Agent / 智能体运行与协作 | Agent Package、Role、Role Credential、ProductDiscussionSession、Collaboration Message | 谁承担哪个岗位？哪条 Conversation 属于哪个工作身份？ |
-| Execution / 执行 | Intent、Effect、Approval、Result、Artifact、Evidence、UNKNOWN 与恢复 | 一个真实操作到底有没有发生？证据是什么？能否安全重试？ |
-| Model / 模型与推理 | FAST / REASON、Capability Profile（模型能力档案：通过真实探测记录当前模型实际能力）、推理队列和 Provider 调用 | 这次需要哪种推理？当前模型真的具备这项能力吗？ |
-| Deployment / 部署治理 | Module 生命周期、外部资源、包版本、Workspace 安装与运行状态 | 系统怎样真正被安装、配置、启动、更新和重新观察？ |
+| Task / 任务与编排 | Task、Node、`runNo`、TaskRoleBinding、TaskDocument、TaskGroup、Campaign、Product Intent | 当前工作做到哪里？下一 Node 是谁？什么时候允许开始、等待、失败、完成？ |
+| Agent / 智能体运行与协作 | Agent Package、Role、Role Credential、Worker / Conversation identity、Product Discussion、Collaboration Message | 谁承担哪个岗位？哪条 Conversation 属于哪个工作身份？ |
+| Execution / 执行 | Intent、Effect、Approval、Result、Artifact、Evidence、UNKNOWN 与恢复 | 一个真实操作到底有没有发生？能否安全重试？ |
+| Model / 模型与推理 | FAST / REASON、Capability Profile、推理队列和 Provider 调用 | 当前需要什么推理？真实 Provider 能不能提供？ |
+| Deployment / 部署治理 | Module 生命周期、外部资源、包版本、Workspace 安装与运行状态 | 这些能力怎样真正存在于当前机器和外部环境？ |
 
-`platform-host` 是 Composition Root（组合根：负责装配和连接各领域运行组件的入口），不是第六个业务领域。它可以组合 Task Reconciliation（任务核对：重新读取正式事实并判断是否存在确定性下一步）、Agent、Execution 和 Model 客户端，但不能为了方便再保存一份 Task、Role 或 Execution 真值。
+`platform-host` 是 Composition Root（组合根：负责装配和连接各领域运行组件的入口），不是第六个业务领域。
+
+Gateway、Browser Extension、Provider、CLI 等也可能位于关键链路中央，但“调用很多东西”不等于“拥有很多事实”。
 
 因此整条系统都可以用一个问题检查：
 
@@ -28,41 +47,37 @@ ProFlow 最重要的设计原则是 Fact Owner（事实归属方：某类正式�
 这个事实最终听谁的？
 ```
 
-答不清时，自动化通常很快会出现第二真源。
+答不清时，系统通常很快会出现第二真源。
 
 ## 一张主链先把系统串起来
 
-Phase 4（第四阶段）的正式产品目标链与已经稳定的 Task / Agent / Execution 主链可以放在同一张图里。这里要注意：**架构目标、源码存在和真实验收是不同层级。** 当前 Foundation 仍未 READY，文末会单独列出 2026-09-17 的证据状态。
+下面这张图表达的是 ProFlow 当前的目标运行关系和稳定 Owner 边界。它是**机制地图**，不是“每个 Gate 当前已经 PASS”的状态表。
 
 ```text
 用户提出产品目标
         │
         ▼
 Product Discussion
-确认 Goal / Scope / COST / Privacy / License / Risk
+收敛 Goal / Scope / Cost / Privacy / License / Risk
         │
         ▼
 ProductDocument + scoped ProductIntent
         │
         ▼
-Task Owner exactly-once materialize Task(PENDING)
+Task Owner 校验并物化 Task
         │
-        ├── fresh Product Worker
-        ├── fresh Dev Worker
-        └── fresh Test/Ops Worker
-        │
-        ▼
-正式 Requirement → TaskDocument
+        ├── Product Worker
+        ├── Dev Worker
+        └── Test / Ops Worker
         │
         ▼
-Task READY
+Requirement → TaskDocument
         │
         ▼
-Human start
-或仍在 CampaignAuthorization 边界内的合法自动 start
+Task READY / ACTIVE
         │
         ▼
-Task ACTIVE → Node READY
+Node READY
         │
         ▼
 Task Observer / Reconciliation
@@ -71,89 +86,100 @@ Task Observer / Reconciliation
 Browser Driver restore + wake 正确 Worker
         │
         ▼
-Worker startNode → IN_PROGRESS
+Worker fresh-read 当前事实
+→ startNode
+→ 一个 Worker Turn 内连续工作
+        │
+        ├── Task / Document Action
+        ├── peer clarification
+        ├── engineering tools
+        └── durable Effect → Execution
         │
         ▼
-一个 Worker Turn 内连续工作
-├─ Task / Document Actions
-├─ askPeer / replyPeer
-├─ Repomix / CodeGraph / Local Dev
-├─ Web Search / File / Code Interpreter
-└─ 需要 durable recovery 的真实 Effect → Execution Runtime
+complete / wait / fail
         │
         ▼
-Worker complete / wait / fail
+下一 Node / Task terminal
         │
         ▼
-下一 Node READY → 下一角色
-        │
-        ▼
-最后一个 Node 完成 → Task SUCCEEDED
-        │
-        ▼
-Task Observer STOP_DRIVING
+Test / Acceptance / Evidence
         │
         ▼
 terminal evidence 回到 Product Discussion
         │
         ├── GAP_REMAINS → 新 ProductIntent → 新的有界 Task
-        └── GOAL_SATISFIED → Campaign CLOSED
+        └── GOAL_SATISFIED → Closure
 ```
 
-围绕这条主链还有三条支撑链：Model Runtime 提供受控推理，Deployment 保证真实资源和版本已经存在，Monitor 工程飞轮负责发现并修复 ProFlow 自己的平台缺口。
+围绕这条主链还有三类支撑：
 
-下面按读者最自然的几个问题展开。
+- Model Runtime 提供受控推理；
+- Deployment 确保 package、resource、workspace、runtime 真的存在；
+- Monitor 工程飞轮在平台自身暴露缺口时修 ProFlow，再把系统送回原产品场景。
+
+下面按技术读者最自然的追问展开。
 
 ## 一、产品目标为什么不能直接变成 Task
 
-用户说“把这个产品继续做好”时，通常还混着目标、功能、技术方案、成本、部署和很多未知项。直接把这句话变成 Task，会让一个应该有边界的工作单元变成长期需求池。
+用户说“继续把这个产品做好”时，通常混着目标、功能、技术方案、成本、部署和未知项。
 
-Phase 4 因此把 ProductDiscussionSession（产品讨论会话：在具体 Task 之前围绕一个产品 Goal 持续收敛目标的正式会话）放在 Task 前面。目标流程是：
+如果直接把这句话变成一个长期 Task，会出现两个问题：
+
+1. Goal 会不断变化，而 Task 又失去清晰结束条件；
+2. 后续 Agent 会把新想法、旧约束和临时方案不断塞进同一份工作事实。
+
+所以 ProFlow 把 Product Goal 和 Task 分开。
+
+产品讨论负责把一个模糊目标收敛成可交付输入：
 
 ```text
 Initial Brief
-→ 澄清 Goal
-→ 确认 Scope / Non-Scope
-→ 确认成本、隐私、License、风险边界
+→ Goal
+→ Scope / Non-Scope
+→ Cost / Privacy / License / Risk
 → Research
-→ 比较候选方案
-→ 第一性原理做减法
+→ Options
+→ First-principles reduction
 → ProductDocument
-→ 一份有边界的 ProductIntent
+→ scoped ProductIntent
 ```
 
-这里的身份必须和 Task Worker 分开：
+这里最重要的边界是：
 
 ```text
-ProductDiscussionSession
-≠
-Task-scoped Product Worker
+Product Discussion
+拥有 Goal 级认知
+
+Task
+拥有一份有界工作
 ```
 
-产品讨论属于 Goal 级上下文；Task 创建以后，为 Product / Dev / Test 建立新的 Task-scoped Worker（任务内工作实例：只服务这一份 Task 的具体 Conversation）。这样旧产品讨论不会被误当成 Task binding，也不会让不同 Task 共用一条工作 Conversation。
+Goal 可以长期演进；Task 必须能够结束。
 
-### Product 负责提出工作，Task Owner 负责安全创建
+### Product 决定“应该做什么”，Task Owner 决定“能否安全创建”
 
-Product 不获得任意 `createTask`、binding 或状态写入权。它提交受约束的 Product Intent（产品意图：描述下一份有界工作应该是什么的正式请求），Task Owner 再验证身份、Goal revision、Scope、Constraints、前序结果和幂等键。
+Product 不应该直接获得任意 `createTask`、任意 binding 或任意状态写入权。
 
-```text
-Product cognition
-→ ProductDocument
-→ submitProductTaskIntent
-→ Task Owner validation
-→ durable ProductIntent
-→ exactly-one Task(PENDING)
-```
+它提交的是受约束 Product Intent；Task Owner 再校验：
 
-幂等（同一个语义请求重复提交也不会产生第二份业务结果）在这里非常重要：网络丢响应不能多造一份 Task；同一个 key 如果换了内容也不能悄悄覆盖原 Intent。
+- caller identity；
+- Goal revision；
+- Scope / Constraints；
+- 前序 Task 结果；
+- idempotency identity；
+- Campaign / prerequisite。
 
-### Campaign Authorization 解决“每一轮是否都重新问人”
+只有通过这些 Owner-side 校验，才允许物化新的 Task。
 
-持续迭代既不能每个 Task 都重新让用户做完全相同的确认，也不能让 Product 自己想开就开。
+这让“模型认为应该继续”与“系统正式承认存在下一份 Task”成为两件不同的事。
 
-CampaignAuthorization（活动授权：用户对既定 Goal、Scope、成本、隐私、License 和风险边界的一段持续授权）保存的是允许范围，不是无限权限。
+### Campaign Authorization 不是无限自动化授权
 
-后续 Task 到 READY 时，自动 start 必须重新读取当前事实：
+持续产品迭代也不能每一轮都机械重复同一份人工确认。
+
+Campaign Authorization 保存的是一个明确边界内的持续授权，例如 Goal、Scope、成本、隐私、License 和风险约束。
+
+自动 start 前仍然要重新读取当前事实：
 
 ```text
 Task 仍 READY？
@@ -161,40 +187,54 @@ Campaign 仍 OPEN？
 Goal revision 仍一致？
 Authorization 未撤销？
 Task scope 仍在授权范围内？
-成本 / 隐私 / License / 风险未越界？
-TaskGroup prerequisite 仍满足？
+成本 / 隐私 / License / 风险仍未越界？
+前置条件仍满足？
 ```
 
-任一不满足就不能自动产生 start Effect。目标实质变化、Scope 明显扩张、付费、OAuth / 新账户授权、隐私或 License 边界变化、高风险不可逆操作，都重新回到人类决策。
+任何实质越界都重新回到人类决策。
 
-## 二、Task 创建以后，为什么还要单独创建三个 Worker
-
-Task 物化后先拥有正式 `taskId`、有序 Node、三个岗位声明和空 binding，但它还没有真实 ChatGPT Worker。
-
-运行期需要把三个长期 Role（角色：稳定职责与权限的逻辑岗位）分别映射成当前 Task 的 Conversation：
+因此：
 
 ```text
-Product
-Controller / Dev
-Test / Ops
+Campaign Authorization
+!= 永久授权
+
+Task READY
+!= 任意副作用已授权
 ```
 
-完整身份链是：
+## 二、Task 创建以后，为什么还要单独建立 Worker
+
+Task 物化以后，先有的是正式业务对象：
+
+- `taskId`；
+- ordered Nodes；
+- required roles；
+- formal documents；
+- empty / partial bindings。
+
+它并不等于真实 ChatGPT Conversation 已经存在。
+
+运行期需要把长期 Role 映射成当前 Task 中真正工作的 Worker / Conversation：
 
 ```text
 Agent Package
-→ deployed Role / g-id
-→ Task-bound Worker / c-id
-→ conversationLocator
+→ deployed Role
+→ Task-bound Worker
+→ Conversation identity / locator
 ```
 
-其中 `g-id` 表示真实部署的 Custom GPT，`c-id` 表示这份 Task 中该角色的工作 Conversation，`conversationLocator` 是 Browser 以后恢复这条 Conversation 的稳定定位信息。
+这个链路解决的是一个经常被 UI 隐藏的问题：
 
-`tabId / windowId / contentInstanceId` 只表示“此刻浏览器从哪里控制”，不是业务身份。Chrome 刷新、Extension reload、Tab 关闭都不能自动制造第二个 Worker。
+> **Role、Worker、Conversation 和 Browser Tab 不是同一种身份。**
 
-### 创建一半失败，只补缺的那个
+`tabId / windowId / contentInstanceId` 只表示“此刻从哪里控制页面”，不能成为业务身份。
 
-例如 Product 和 Dev 已经确认创建，Test 未完成：
+Chrome 刷新、Extension reload、Tab 重建都不应该自动制造第二个 Worker。
+
+### 创建一半失败，只补缺的部分
+
+假设三个角色里：
 
 ```text
 Product = BOUND
@@ -202,85 +242,158 @@ Dev     = BOUND
 Test    = MISSING
 ```
 
-恢复只允许补 Test。若某次创建请求 timeout，也先回真实 ChatGPT 页面和 Task binding 检查 Conversation 是否已经存在，而不是把 timeout 直接理解成“没创建”。这个恢复规则和 Execution 的 UNKNOWN 是同一种工程原则。
+恢复只应该补 Test。
 
-### Requirement 不是靠聊天记忆传递
+如果一次创建调用 timeout，也必须先回到真实 ChatGPT 页面和 Task binding 核对 Conversation 是否已经出现，而不能直接理解成“没有创建”。
 
-前置 Product Discussion 里的认识要变成正式 Task 输入，必须进入 Owner-backed document（由正式 Owner 持有的文档事实）：
+这里已经和 Execution 的 UNKNOWN 使用同一种恢复思想：
+
+```text
+response lost
+!= effect not happened
+```
+
+### Requirement 不能靠 Conversation Memory 传递
+
+前置 Product Discussion 里的认知要进入 Task，必须变成 Owner-backed document。
 
 ```text
 ProductDocument
 → ProductIntent
 → Task materialization
-→ transferProductIntentToTask
-→ TaskDocument(REQUIREMENT)
+→ Requirement / TaskDocument
 → Worker fresh-read
 ```
 
-Task 只有在 Requirement、required role binding 和必要 TaskGroup 前置条件都满足以后，才由 Task Owner 算出 READY。模型“觉得准备好了”不是状态转换依据。
+模型记得某句话，不等于系统拥有这份 Requirement。
 
-## 三、Task / Node 怎样推进，而不是靠 Agent 轮流说“继续”
+Task 是否 READY，也应该由 Owner facts 计算，而不是由模型说“我准备好了”。
 
-Task（任务：有明确目标、范围和结束条件的正式工作）与 Node（节点：Task 中由某个角色承担的一步工作）把多 Agent 协作从聊天顺序变成持久化工作流。
+## 三、Task / Node 怎样推进，而不是让 Agent 轮流说“继续”
 
-v1 刻意没有做通用 DAG（有向无环图：用任意图结构表达复杂依赖的工作流模型），主链是有序 Node + 显式状态转换 + reopen。
+Task 和 Node 把多 Agent 协作从“聊天顺序”变成正式工作流。
+
+核心状态关系可以理解成：
 
 ```text
-Task: PENDING → READY → ACTIVE → SUCCEEDED
-                    ↘ WAITING / FAILED / PAUSED / TERMINATED
+Task
+PENDING
+→ READY
+→ ACTIVE
+→ SUCCEEDED
 
-Node: PENDING → READY → IN_PROGRESS → SUCCEEDED
-                          ↘ WAITING / FAILED / TERMINATED
+异常路径
+→ WAITING / FAILED / PAUSED / TERMINATED
+
+Node
+PENDING
+→ READY
+→ IN_PROGRESS
+→ SUCCEEDED
 ```
 
-### startTask 把“可以开始”变成正式业务事实
+v1 刻意没有先做通用 DAG。真实需要只是：
 
-`startTask` 不是把一个 UI 按钮点亮，而是在一个事务里重新校验 Task version、binding、TaskGroup eligibility 和 start authority，然后同时把 Task 置为 ACTIVE、首 Node 置为 READY，并更新 `currentNodeId`。
+- 有序 Node；
+- 明确 Owner；
+- 显式状态转换；
+- reopen / recovery；
+- 可审计的历史。
 
-这样不会出现 Task 已 ACTIVE、首 Node 却没准备好的半状态。
+### startTask 不是点亮 UI，而是一次正式状态转换
 
-### Node READY 后，Observer 只发现下一步，不代替 Worker 工作
+`startTask` 必须重新校验：
 
-Task Observer（任务观察器：读取当前 Owner facts 并发现确定性下一动作的应用层协调器）正常路径不调用模型：
+- expected version；
+- required binding；
+- prerequisite；
+- start authority。
+
+然后在同一正式转换里：
 
 ```text
-READ current owner facts
-→ DETECT deterministic condition
+Task → ACTIVE
+首 Node → READY
+currentNodeId → 正确节点
+```
+
+这样不会出现 Task 已 ACTIVE，但首 Node 还没有正式准备好的半状态。
+
+### Observer 发现“该继续”，但不替 Worker 工作
+
+Task Observer 正常路径读取正式事实，再检测确定性条件：
+
+```text
+READ owner facts
+→ DETECT deterministic next condition
 → REQUEST typed carrier action
 ```
 
-Node READY 时：
+Node READY 时，职责依次是：
 
 ```text
 Task Observer
 → 请求 Browser wake
-→ Browser 恢复正确 Conversation 并投递 NODE_READY
-→ Worker fresh-read Task / Node
-→ Worker 自己调用 startNode
-→ Task Owner 把 Node 置为 IN_PROGRESS
+
+Browser Driver
+→ 恢复正确 Conversation
+→ 物理投递 wake
+
+Worker
+→ fresh-read Task / Node
+→ startNode
+
+Task Owner
+→ 承认 Node IN_PROGRESS
 ```
 
-这四步故意拆开：Observer 发现“该继续”，Browser 负责物理送达，Worker 正式接受工作，Task Owner 才改变 workflow truth（工作流正式事实）。
+这四步故意拆开。
 
-### completeNode 只在正式输出成立后释放下一 Node
+Observer 发现下一步，不拥有 Worker 行为；Browser 负责送达，不拥有 workflow truth；Worker 接受工作，但最终状态仍由 Task Owner 记录。
 
-当前 Worker 满足 required outputs 后调用 `completeNode`：
+### completeNode 只有在正式输出成立以后才释放下一步
 
 ```text
 current Node → SUCCEEDED
         ↓
 还有下一 Node？
-├─ 有 → next Node PENDING → READY
-└─ 无 → Task → SUCCEEDED
+├─ 有 → next Node READY
+└─ 无 → Task SUCCEEDED
 ```
 
-如果是可信业务失败才使用 `failNode`。Execution 仍在 RUNNING、模型暂时忙、Browser 在恢复、协作消息等待投递，都不能为了“看起来停住了”就映射成 Task FAILED 或 WAITING。
+如果只是：
 
-### WAITING 表示业务 blocker，不是所有等待
+- Execution 仍 RUNNING；
+- 模型暂时 busy；
+- Browser 正在恢复；
+- peer message 等待投递；
 
-`waitNode` 只表达真正需要业务输入或正式决策的阻塞，例如用户确认、Requirement 澄清或外部业务输入缺失。
+都不应该为了“看起来卡住了”就映射成 Task FAILED 或 WAITING。
 
-下面这些等待保留在自己的 Owner：
+## 四、WAITING 为什么只能表达业务 blocker
+
+这是 Phase 2 以后很重要的一条语义收敛。
+
+早期很容易把所有“正在等”都塞进一个 waiting 状态：
+
+```text
+等审批
+等模型
+等 Browser
+等 peer
+等真实 Effect
+等用户输入
+```
+
+但这些等待属于不同 Owner。
+
+Task 的 `WAITING` 应该只表示真正的业务 blocker，例如：
+
+- Requirement 需要人类确认；
+- 产品方向需要正式决策；
+- 外部业务输入缺失。
+
+下面这些继续留在自己的 Owner：
 
 ```text
 Execution RUNNING / WAITING_APPROVAL
@@ -289,23 +402,52 @@ Browser recovery
 Model queue busy
 ```
 
-一类事实只在一个 Owner 中存在，恢复时才不会出现互相打架的状态机。
+这就是：
 
-### reopen 是新一轮执行，不是删除旧历史
+> **Business Wait != Execution Lease，也 != Runtime busy。**
 
-可信失败被修复以后，`reopenNode` 保留同一个 Task / Node，增加新的 `runNo`，让目标 Node 回到 READY，并按规则把后续 Node 重置到 PENDING。
+如果把不同等待强行折成 Task WAITING，恢复时很快就会出现多个状态机互相覆盖。
 
-TaskRoleBinding 保留，所以系统恢复原来的 Worker Conversation；旧 run 的 history、文档和 Evidence 也保留。这比“失败以后重建整个 Task 和三支 Agent”更容易审计和恢复。
+## 五、reopen 为什么不是“失败后重新建一套”
 
-## 四、Agent 怎样保持身份稳定，又不会变成自由聊天网络
+可信失败修复以后，`reopenNode` 保留同一个 Task / Node identity，增加新的运行轮次，再让目标 Node 回到 READY。
 
-ProFlow v1 固定 Product、Controller / Dev、Test / Ops 三个长期复合岗位。这样做不是因为三个角色“最聪明”，而是因为长期角色越多，身份、权限、Conversation、协作、恢复和 E2E（端到端）路径都会乘法增加。
+这样：
 
-专业能力可以通过 Knowledge、Context、工具和临时研究增加；只有真正出现独立长期事实和生命周期时，才值得新增长期 Role。
+- TaskRoleBinding 可以继续复用；
+- 原 Worker Conversation 可以恢复；
+- 旧 run history 不被覆盖；
+- Failure / Evidence 继续存在；
+- 后续 Test 能知道这是同一份 Requirement 的新一轮执行。
 
-### Worker Turn 不需要 Browser 每一步都发送“继续”
+```text
+same Task
+same logical Node
+new runNo
+preserved evidence
+```
 
-Worker Turn（智能体工作轮次：一次 wake 进入 Conversation 后，模型连续推理、调用多个 Action 并处理返回结果的连续工作段）不是持久化 Entity，也没有单独 Scheduler。
+这比“失败以后重新创建 Task 和三支 Agent”更容易审计，也更符合恢复语义。
+
+## 六、Agent 怎样保持身份稳定，又不会变成自由聊天网络
+
+ProFlow 长期角色数量刻意保持少。
+
+原因不是三个角色在理论上最优，而是每新增一个长期 Role，都同时增加：
+
+- identity；
+- credential；
+- Conversation；
+- permission；
+- collaboration；
+- recovery；
+- E2E acceptance。
+
+专业能力可以通过 Knowledge、Context、Tool 或临时 Research 增加；只有真正出现独立长期事实和生命周期时，才值得新增长期 Role。
+
+### Worker Turn 不是一个新的持久实体
+
+一次 wake 以后，Worker 本来就可以在同一 Turn 内连续推理和调用 Action：
 
 ```text
 wake
@@ -317,169 +459,205 @@ wake
 → formal Task action
 ```
 
-Action result 本来就会回到当前 GPT Turn。只有等待 Peer reply、Execution durable result、Approval 或跨 Turn 的异步现实结果时，当前 Turn 才结束；结果后来 ready，再由 Observer 恢复同一个 Worker。
+不需要 Browser 每完成一步都再发送一句“继续”。
+
+只有真正跨 Turn 的异步现实出现时，例如：
+
+- 等待 peer reply；
+- 等待 durable Execution；
+- 等待 Approval；
+- 等待外部现实结果；
+
+当前 Turn 才结束，之后再由正式 Observer / Carrier 恢复同一个 Worker。
 
 ### Collaboration 只处理局部问讯
 
-`askPeer / replyPeer` 用于同一 Task 内的短问题，例如 Dev 问 Product 一个 Requirement 歧义，Test 问 Dev 一个复现细节。
+`askPeer / replyPeer` 适合同一 Task 内的局部澄清：
 
-正式 Requirement、Technical Design、Test Result、Task 状态转换和跨 Task 续轮不能塞进 Message Center（消息中心：保存同一 Task 内局部问答的正式通道）。否则聊天消息会重新长成第二条隐藏 Workflow。
+- Dev 问 Product 一个 Requirement 歧义；
+- Test 问 Dev 一个复现细节。
 
-逻辑消息与物理送达也分层：
+它不应该承载：
+
+- 正式 Requirement；
+- Technical Design；
+- Test Result；
+- Task 状态转换；
+- 跨 Task 产品续轮。
+
+否则聊天消息会重新长成第二条隐藏 Workflow。
+
+逻辑消息和物理送达也要分层：
 
 ```text
-Agent Owner creates PENDING message
-→ Browser restores target Worker
+Agent Owner
+→ 创建 PENDING logical message
+
+Browser
+→ restore target Worker
 → physical submit
-→ page fingerprint Evidence
-→ Agent Owner records DELIVERED / FAILED / UNKNOWN
+→ readback fingerprint
+
+Agent Owner
+→ 记录 DELIVERED / FAILED / UNKNOWN
 ```
 
-页面 submit 超时以后，如果无法证明消息有没有送达，就先核对现实，不能再发一遍。
+页面 submit timeout 后，如果无法证明消息是否已经进入 Conversation，就先核对现实，不能直接再发送一次。
 
-多 Agent 的完整身份、权限与协作设计见 [03｜多 Agent 如何从更多角色收敛成稳定协作系统](./03-多Agent如何从更多角色收敛成稳定协作系统.md)。
+## 七、真实执行为什么必须把“调用结果”和“现实结果”分开
 
-## 五、真实执行为什么要把“调用结果”和“现实结果”分开
+Execution 负责最危险的一类事实：
 
-Execution（执行领域）负责最危险的一类事实：一个会改变真实世界的动作到底有没有发生。
+> **一个会改变真实世界的动作到底有没有发生。**
 
-一次可靠执行至少要区分：
+一次可靠执行至少区分：
 
 ```text
 Intent
 → Policy / Approval
 → Precondition Evidence
-→ Effect Started
+→ Effect
 → Postcondition Evidence
 → Result
 ```
 
-Result（结果：系统对这次执行的可信结论）、Artifact（产物：执行生成的文件、报告或其它对象）和 Evidence（证据：支持这个结论的现实证明）不能混成一件事。拿到一个 patch 文件不证明 patch 已应用；点过 Browser send 也不证明消息已经进入 Conversation。
-
-### UNKNOWN 是正式结果，不是失败的另一种写法
-
-真实副作用最重要的三态是：
-
-```text
-APPLIED
-= 有证据证明已经发生
-
-NOT_APPLIED
-= 有证据证明没有发生
-
-UNKNOWN
-= 目前既不能证明发生，也不能证明没有发生
-```
-
-当调用 timeout，而 Effect 可能已经开始时，下一步是 Reality Reconciliation（真实结果核对：回到文件、Git、进程、Browser、Registry 或远端资源重新确认现实），不是 blind retry（盲重试：在不知道原副作用结果时再次执行同一动作）。
+Result、Artifact 和 Evidence 不是同一件事。
 
 例如：
 
-```text
-browser.submit → 查目标 Conversation fingerprint
-git.commit     → 查 HEAD / commit identity
-process.start  → 查 PID / listener / command
-npm publish    → 查 exact package@version
-GPT create     → 查 stable g-id / live resource
-```
+- 拿到一个 patch 文件，不证明 patch 已应用；
+- Browser click 返回，不证明消息已经进入目标 Conversation；
+- publish 命令 timeout，不证明 Registry 里没有新版本。
 
-确认已发生就接受现实；确认没发生才在合同允许时重新执行；仍然无法确认就保持 UNKNOWN。
+### UNKNOWN 是正式结果
 
-### Direct Tool 与 Durable Execution 是两条路径
+真实副作用最重要的不是 SUCCESS / FAILED 二选一，而是：
 
-Worker 在当前 Turn 里直接调用 Repomix、CodeGraph、Local Dev 时，不需要给每个 grep、read、test 命令建立 durable `executionRef`。
+| 状态 | 含义 | 下一步 |
+| --- | --- | --- |
+| `APPLIED` | 有证据证明副作用已经发生 | 接受现实，继续业务判断 |
+| `NOT_APPLIED` | 有证据证明副作用没有发生 | 合同允许时才考虑重试 |
+| `UNKNOWN` | 目前既不能证明发生，也不能证明没有发生 | 进入 Reality Reconciliation |
 
-当前 Direct Tool（直接工具：结果直接回到当前 Worker Turn 的本机工程调用）路径是：
+Reality Reconciliation 的本质是回到真正权威的现实重新确认：
 
-```text
-Custom GPT Action
-→ Agent Gateway
-→ Platform Host admission
-→ Browser Extension Local Tool lane
-→ execution-local
-→ macOS
-→ result 回当前 Worker Turn
-```
+| Effect | 现实回读 |
+| --- | --- |
+| Browser submit | 目标 Conversation message fingerprint |
+| Git commit | HEAD / commit identity |
+| Process start | PID / listener / process identity |
+| Package publish | exact package@version |
+| SaaS resource create | stable remote identity |
 
-需要持久审批、跨 Turn 恢复或真实副作用证据的操作才进入 Durable Execution（持久执行：拥有独立生命周期、证据和恢复语义的执行记录）。两条路径都受边界约束，但不强行共用一个生命周期。
+核心规则只有一句：
 
-### Approval 还有三个不同层次
+> **A failed command is not proof that an effect did not happen.**
 
-Task start authorization、Execution Approval（执行审批：针对真实 Effect 的持久安全事实）和 ChatGPT 页面 Action Permission 是三件事。
+不能证明没发生，就没有资格安全重试。
 
-```text
-页面点了 Allow
-≠ Execution Approval 已成立
+### Approval 也有不同层级
 
-Execution Approval 已成立
-≠ Effect 已经执行成功
-
-Task 可以 start
-≠ 后续任意副作用都被授权
-```
-
-这个区分防止 Browser UI 成为隐形权限系统。
-
-长期执行、UNKNOWN 和恢复机制详见 [05｜ProFlow 怎样从一次跑通走向长期可运行的工程系统](./05-ProFlow怎样从一次跑通走向长期可运行的工程系统.md)。
-
-## 六、Browser Extension 为什么是 Driver，不是业务大脑
-
-ProFlow 的 Chrome Extension（浏览器扩展：驻留在 Chrome 中连接真实页面和本机桥接能力的运行组件）是 Browser Driver（浏览器驱动层：把系统已经形成的意图落到页面，并把页面现实重新带回系统）。
-
-它内部同时驱动多条 Lane（隔离通道：共享 Chrome 基础设施，但不共享业务状态机和执行队列）：
+至少要区分：
 
 ```text
-Browser Session / Page Reality
-Task UI
-Worker create / restore / wake
-Collaboration delivery
-Permission / Attention
-Product discussion / review delivery
-Custom GPT Provisioning
-Local Tool
-Monitor
-Recovery / System Observer
+Task start authorization
+!=
+Execution Approval
+!=
+ChatGPT 页面 Action Permission
 ```
 
-这些线共享页面观察、Chrome API、bridge、heartbeat 等底层能力，但不能因为都能控制 Tab 就共享一套业务队列。
+页面点过 Allow，不等于 Execution Owner 已经建立正式 Approval；Execution Approval 成立，也不等于真实 Effect 已经成功。
 
-一条消息提交的可靠语义不是“click 成功”，而更接近：
+UI 不能成为隐形权限系统。
 
-```text
-WRITE
-→ COMMIT：回读输入和预期一致
-→ READY：提交动作真实可用
-→ CLICK
-→ REALITY：目标 Conversation 出现同一 fingerprint
-```
+## 八、Browser Extension 为什么是 Driver，不是业务大脑
 
-DOM-first（DOM 优先：能从页面结构确定事实时优先读取结构化页面，而不是先让模型猜截图）是主路径，Vision（视觉识别：从截图理解页面状态）只在确定性页面信息不足时补位。
+Browser Extension 连接的是不可替代的页面现实：
 
-一句话概括扩展边界：
+- restore Conversation；
+- read DOM / page state；
+- input / click / submit；
+- permission / attention；
+- Worker create / wake；
+- collaboration delivery；
+- product discussion delivery；
+- external resource provisioning；
+- local tool bridge；
+- Monitor page lane。
+
+它内部可以有很多 Lane，但这些 Lane 共享基础设施，不共享业务状态机。
+
+一句话概括：
 
 > **Driver 负责让流程真正发生；Owner 负责定义什么事实成立。**
 
-完整 12 条浏览器流程见 [04｜ProFlow 浏览器扩展如何驱动浏览器内各条流程](./04-ProFlow浏览器扩展如何驱动浏览器内各条流程.md)。
+### Observation 必须是只读 Reality
 
-## 七、模型为什么只有推理权，没有工作流决定权
-
-Model Domain（模型领域）对外提供 `FAST / REASON / AUTO` 逻辑角色。当前 Phase 4 的目标部署形状是一个 Provider、一个 selected model，再用不同模式形成两种逻辑推理：
+Phase 2 曾经发生过很典型的错误：
 
 ```text
-FAST
-→ selected model
-→ chat_template_kwargs.enable_thinking = false
-
-REASON / UI 可显示 THINK
-→ selected model
-→ chat_template_kwargs.enable_thinking = true
+observe
+→ 自动 scroll
+→ viewport 改变
+→ user_reviewing / precondition 被影响
+→ 下一次 observe 再改变页面
 ```
 
-模型名不是能力证明。Provider URL、model inventory、thinking mode、structured output（结构化输出：要求模型返回可机器解析结构）、Vision、context / output 边界都需要 live probe（在线探测：向当前真实服务发受限请求验证能力）。
+于是形成稳定边界：
 
-同一台端侧设备还不能假设能够稳定并发多个推理角色，因此 Model Runtime 使用 single-flight（单通道串行：同一物理推理通道一次只运行一个请求）和有界优先级队列，把设备限制吸收在 Runtime 内。
+```text
+OBSERVE
+→ read only
 
-模型正常用于认知、分类、诊断和受控 assessment，但不能覆盖 hard policy、Owner version、identity、scope、idempotency 或 Human Approval。
+MUTATE
+→ input / click / scroll / submit
+
+VERIFY
+→ 重新观察 postcondition
+```
+
+Observation 不能为了“更容易看”顺手改变被观察对象。
+
+### Delivery 一旦成立，不能被下游 response 反向改写
+
+另一类历史事故是：
+
+```text
+Browser submit
+→ Delivery 已确认
+→ Controller 后续 response / Action 失败
+→ 整个 Browser command 又被标成 FAILED
+```
+
+这样恢复时就可能重复发送。
+
+正确边界是：
+
+```text
+Browser Effect
+→ Delivery evidence
+→ SUCCEEDED
+→ END
+
+Controller continuation
+→ 独立生命周期
+```
+
+这也是为什么 ProFlow 后来不断强调 Effect terminal boundary。
+
+## 九、模型为什么只有推理权，没有工作流决定权
+
+Model Domain 对外提供逻辑推理角色，例如 FAST / REASON。
+
+这里最重要的不是某个具体模型名称，而是：
+
+- 能力必须 live probe，而不是根据 model ID 猜；
+- physical device 的并发、队列和切换限制应该由 Runtime 吸收；
+- Provider 配置不应该穿透业务 Flow；
+- 模型负责 assessment，不负责覆盖 hard policy。
+
+权威关系仍然是：
 
 ```text
 Owner current fact
@@ -488,33 +666,39 @@ Owner current fact
 > Conversation / DOM / log guess
 ```
 
-模型和端侧算力为什么这样设计，见 [07｜ProFlow 如何从源码走到真实可运行产品](./07-ProFlow如何从源码走到真实可运行产品.md) 的模型 Reality Chain。
+模型可以：
 
-## 八、Deployment 为什么必须一直追到 Runtime
+- 分类；
+- 诊断；
+- 解释；
+- 提出候选；
+- 做受约束判断。
 
-Deployment（部署治理领域）经历过从中央 Planner 到 Module 自治的收缩。当前每个 Module（模块：拥有自己 setup、status、start、stop 和恢复语义的自治部署单元）统一提供七个标准能力：
+但不能越过：
+
+- identity；
+- version；
+- scope；
+- idempotency；
+- Human Approval；
+- Task Owner transition。
+
+## 十、Deployment 为什么必须一直追到 Runtime
+
+Deployment 经历过从中央 Planner 到 Module 自治的收缩。
+
+当前设计要求 owning Module 自己拥有 setup、status、start、stop 和恢复语义；Platform CLI 只负责发现、排序、调用和聚合。
+
+这里最关键的是：
 
 ```text
 install
-uninstall
-status
-setup
-docs
-start
-stop
+!= setup
+!= start
+!= runtime adopted
 ```
 
-Platform CLI（平台命令行入口）只负责发现 Module、按依赖顺序调用、聚合结果和 package-manager orchestration（包管理编排）；它不读取 Module 私有配置，也不保存第二份“全平台真值”。
-
-### install、setup、start 回答的是不同问题
-
-`install` 让 Workspace 拥有正确 package；`setup` 让每个 Module 自己完成机器可完成的配置，并只把真实外部授权留给人；`start` 只在 setup status 已满足时启动 Runtime。
-
-Chrome、Extension、Dev Tunnel、Model Provider、Custom GPT 都属于真实 External Resource（外部资源：不在本机进程内，但当前产品运行依赖的对象），需要自己的 readback 和恢复语义。
-
-### 源码修好并不等于用户运行到新代码
-
-影响 Runtime 的修改至少要穿过：
+源码修改也必须穿过真实供应链：
 
 ```text
 Source Truth
@@ -524,190 +708,228 @@ Source Truth
 → Runtime / Product Truth
 ```
 
-源码、打包产物、Registry 版本、实际 `node_modules`、运行进程和浏览器 Extension 是不同事实层。
+例如 Extension load directory 已经指向新文件，如果 Chrome 没有 reload、真实 Extension instance 没有变化，就不能说用户正在运行新版本。
 
-例如 Extension load directory 已经换成新文件，如果 Chrome 还没 reload 并产生新的真实 `extensionInstanceId` / heartbeat，就不能说 Runtime 已采用新版本。
+同样，Provider config 写对了，也不能证明真实服务支持 structured output、Vision 或 thinking mode；这些都需要当前 Reality。
 
-这条供应链与模型能力链一起在 [07｜ProFlow 如何从源码走到真实可运行产品](./07-ProFlow如何从源码走到真实可运行产品.md) 展开。
+## 十一、Task 成功以后，产品为什么还没结束
 
-## 九、Task 成功以后，产品为什么还没结束
+`Task SUCCEEDED` 只说明一份有边界的工作已经完成，不等于整个 Product Goal 已经满足。
 
-`Task SUCCEEDED` 只说明这一份有边界的工作已经完成，不等于整个 Product Goal 满足。
+terminal 以后，旧 Task 应停止继续驱动。
 
-Task terminal 后，Task Observer 停止驱动旧 Task。Product continuation（产品续轮：把 terminal 结果送回原产品讨论并判断是否值得再建 Task）再基于正式 Owner facts 构造 Product Review 输入。
-
-Product 重新读取：
+Product continuation 再读取：
 
 ```text
-Campaign / Authorization
+Goal / Campaign
+Authorization
 Product Intent
-Task terminal version
+Task terminal fact
 TaskDocument
 Test / Deployment / Product Evidence
 ```
 
-然后只有两种产品级方向：
+然后只有两类产品级结论：
 
 ```text
 GAP_REMAINS
-→ 记录具体 Gap + 新证据
+→ 具体 Gap
+→ 新 Evidence
 → 新 ProductIntent
-→ 新的有边界 Task
+→ 新的有界 Task
 
 GOAL_SATISFIED
-→ Campaign CLOSED
-→ 停止创建下一 Task
+→ Closure
 ```
 
-同一个 Gap 如果没有新证据、没有可测进展，也没有实质不同的新方案，就不能换个措辞继续自动创建 Task。持续迭代最重要的能力之一，是知道什么时候停止。
+同一个 Gap 如果没有：
 
-## 十、Monitor 怎样支撑 ProFlow，又为什么不能算第四个产品 Agent
+- 新证据；
+- 可测进展；
+- 实质不同的新方案；
 
-真实产品运行会暴露 ProFlow 自己的问题：Observer 可能漏 wake，Extension 页面可能变化，Package 可能没进入 Runtime，模型 Provider 可能漂移，Acceptance Harness（验收框架：自动重放真实路径并收集证据的工具体系）自己也可能制造假失败。
+就不能只换一个措辞继续自动创建 Task。
 
-Monitor（工程监控与自迭代通道：使用普通 Chat 观察、修复和验证 ProFlow 自身）负责外层工程飞轮：
+所以持续迭代最重要的能力之一是：
+
+> **知道什么时候停止。**
+
+## 十二、Monitor 怎样支撑 ProFlow，又为什么不是第四个产品 Agent
+
+真实产品运行会暴露 ProFlow 自己的问题：
+
+- Observer 可能漏 wake；
+- Browser 页面可能变化；
+- Package 可能没有真正进入 Runtime；
+- Provider 可能漂移；
+- Acceptance Harness 可能制造假失败。
+
+Monitor 工程飞轮负责：
 
 ```text
-观察当前 Source / Runtime / Browser / Evidence
-→ 找 first divergence（最早偏离点：第一处已经与正式合同不一致的事实）
+观察 Source / Runtime / Browser / Evidence
+→ 找 first divergence
 → 使用工程工具修 ProFlow
-→ 重新证明 Source / Package / Workspace / Runtime
+→ 重新证明受影响事实层
 → 回到原真实场景
-→ 继续观察
 ```
 
 它不进入 Product / Dev / Test 业务 Role，也不替这些 Agent 做目标产品决策。
 
-### 2026-09-17 的 Monitor 边界已经和早期方案不同
+还有一条更通用的边界：
 
-当前 Source Gate 和 Workspace / Runtime Adoption 都已经 PASS；仍未完成的是 Real Acceptance（真实验收）：真实 Browser turn loop、飞书 delivery、4h rotation 等还没有正式跑完。Workspace 配置也仍故意保持 `enabled=false / notificationsEnabled=false`。
+> **运行接力、页面防重或业务 shift 状态，不能自动等价成本机工具 authority。**
 
-同时，旧的“Monitor 接班时撤销旧 Chat 的 Local Dev、给新 Chat 发工具 lease”的方案已经废止。当前边界是：
+如果某种旧会话失权语义没有在真正 trusted ingress 上被强制执行，就不能因为应用层写了一个 active owner 字段而宣称旧 caller 已经被 revoke。
 
-```text
-Local Dev
-= 通用、无状态 MCP
-= 普通 Chat 都可以直接使用
-= Monitor 不授予，也不撤销
+这类当前实现细节变化很快，所以本文只保留边界；具体 Monitor run / shift / browser / local tool 状态由当前 ProFlow Spec、Runtime 和 Acceptance Evidence 负责。
 
-Monitor run / shift
-= 记录业务运行、交接、boot、takeover 等协调事实
-= 不等于本机工具权限
+## 十三、用一份真实工作把五个领域重新串一次
 
-Extension monitor memory lock
-= 只在进程内抑制重复页面动作
-= Extension restart 后重新 unlocked
-= 当前接受多个 Monitor Chat 可能竞争
-```
-
-这种设计不靠“旧 Chat 被物理封锁”保证正确，而依靠当前 Owner facts、expected version、幂等、Effect receipt 和 UNKNOWN reconciliation 抵抗重复或竞态。
-
-Monitor 与长期运行的更多细节见 [05｜ProFlow 怎样从一次跑通走向长期可运行的工程系统](./05-ProFlow怎样从一次跑通走向长期可运行的工程系统.md)。
-
-## 十一、用一份真实工作把五个领域重新串一次
-
-假设目标是“给一个真实产品增加一项功能”。完整流程可以简化成：
+假设目标是“给一个真实产品增加一项功能”。
 
 ```text
 1. 用户给 Product Discussion 一个 Goal
-   Agent 保存讨论身份，产品层保存 Goal / Campaign 相关事实
+   收敛目标、边界和风险
 
-2. Product 调研、比较方案、写 ProductDocument
-   收敛 Scope、Constraints、Acceptance
+2. Product 研究、比较方案、形成 ProductDocument
+   把模糊目标变成 scoped ProductIntent
 
-3. Product 提交 scoped ProductIntent
-   Task Owner 校验身份、scope、revision、idempotency
+3. Task Owner 校验 Intent
+   identity / scope / revision / idempotency / prerequisite
 
-4. Task Owner exactly-once 创建 Task(PENDING)
-   Task 获得正式身份和 ordered Nodes
+4. Task Owner 创建一份有界 Task
+   Task 获得正式 identity 和 ordered Nodes
 
-5. Browser Driver 为 Product / Dev / Test 创建 fresh Task Worker
-   Task 保存稳定 TaskRoleBinding
+5. Agent / Browser 为 Product / Dev / Test 恢复或建立正确 Worker
+   Task 保存稳定 binding
 
-6. Requirement 转入 TaskDocument
-   binding + document + prerequisite 齐全后 Task READY
+6. Requirement 进入 TaskDocument
+   Worker 以后 fresh-read 正式输入
 
-7. Human 或有效 CampaignAuthorization 允许 start
-   Task ACTIVE，第一个 Node READY
+7. Task 正式 start
+   首 Node READY
 
-8. Task Observer 发现确定性 READY
+8. Task Observer 发现确定性 next action
    Browser restore + wake 正确 Worker
 
-9. Worker 调 startNode
-   Task Owner 承认 Node IN_PROGRESS
+9. Worker startNode
+   Task Owner 承认 IN_PROGRESS
 
-10. Dev 在 Worker Turn 中工作
-    Repomix 看大上下文
-    CodeGraph 看结构关系
-    Local Dev 读取/修改/运行本机工程
-    需要持久恢复的 Effect 进入 Execution
+10. Dev 在 Worker Turn 中连续工作
+    读 Context / Source
+    调 Engineering Tool
+    必要副作用进入 Execution
 
 11. Dev 写正式 output 并 completeNode
     Task 释放 Test Node
 
-12. Test/Ops 独立读取 Requirement 和 Evidence
-    运行真实验证，写 Test Result
+12. Test / Ops 独立读取 Requirement 和 Evidence
+    做 Test / Runtime / Product 验证
 
 13. 如果可信失败
-    保留失败 Evidence，按正式 Task 语义 WAIT / reopen
+    保存失败 Evidence
+    wait / fail / reopen 按正式 Owner 语义处理
     不靠聊天一句“再试一次”覆盖历史
 
 14. 最后一个 Node complete
-    Task SUCCEEDED，Observer STOP_DRIVING
+    Task terminal
 
 15. terminal evidence 回 Product Discussion
     GAP_REMAINS → 新 ProductIntent → 新 Task
-    GOAL_SATISFIED → Campaign CLOSED
+    GOAL_SATISFIED → Closure
 
-16. 如果途中暴露的是 ProFlow 平台缺陷
-    Monitor 修 ProFlow → 证明 Runtime adoption → 回原场景
-    不由 Monitor 越权替业务 Agent 完成产品工作
+16. 如果途中暴露的是 ProFlow 自身缺陷
+    Monitor 修 ProFlow
+    → 重新证明 Source / Package / Workspace / Runtime / Reality
+    → 回到原产品场景
 ```
 
-到这里，五个领域的责任可以再压成五句话：
+到这里，五个领域可以压成五句话：
 
 ```text
 Task
-负责“工作事实、顺序和产品任务边界”
+负责工作事实、顺序和任务边界
 
 Agent
-负责“谁来思考、以什么身份协作”
+负责谁来思考、以什么身份协作
 
 Execution
-负责“真实动作到底发生了什么”
+负责真实动作到底发生了什么
 
 Model
-负责“需要推理时怎样得到受约束的判断”
+负责怎样得到受约束的推理
 
 Deployment
-负责“这些能力怎样真正存在于当前机器和外部资源上”
+负责这些能力怎样真实存在于环境里
 ```
 
-Browser、Gateway、`platform-host` 都是关键基础设施，但它们不能因为位置居中就顺手接管领域事实。
+Browser、Gateway、CLI、`platform-host` 都可能很重要，但不能因为位置居中就接管领域事实。
 
-## 十二、当前证据边界：文章里的“设计”不能冒充“已经跑完”
+## 十四、这篇文章怎样处理“当前状态”
 
-截至 2026-09-17，可以明确写成当前事实的是：
+本文刻意不维护“今天哪个 Gate PASS、哪个 Runtime enabled、哪个 Campaign started”这类即时状态。
 
-| 能力 | 当前证据层级 |
-| --- | --- |
-| 五领域边界、Owner、Task / Node / Execution / Deployment 基础语义 | 当前 normative truth（正式规范真源） |
-| Task Observer backend reconciliation、Worker / Browser Driver 边界 | 当前规范和源码主线 |
-| Phase 3 Real-1 / Real-2 / Real-3 | PASS / FROZEN / CLOSED，Phase 3 已封版 |
-| Product Intent / Campaign Authorization / Product continuation | Phase 4 正式架构目标和 canonical contract 已冻结并进入主线；Foundation 仍需按当前证据继续收口 |
-| Monitor source | PASS |
-| Monitor Workspace / Runtime Adoption | PASS |
-| Monitor Real Acceptance | `NOT_RUN`；真实 Browser turn loop、飞书、4h rotation 等仍待正式验收 |
-| Monitor 长期运行开关 | 当前仍为 `enabled=false / notificationsEnabled=false` |
-| Phase 4 Foundation | `NOT_READY` |
-| Banner Studio Campaign | `NOT_STARTED` |
-| Phase 5 自我迭代 | future direction |
+原因很简单：
 
-这张表比“源码里已经有某个 class / API”更重要。ProFlow 对自己的要求和对目标产品一样：**Source、Package、Workspace、Runtime、Reality 必须一层一层证明。**
+> **正式知识应该解释机制和工程判断；当前项目状态只能由当前 Owner 决定。**
+
+如果要判断现在到底成立到哪一层，应回到：
+
+```text
+repos/proflow/spec
+→ 当前设计与 Contract
+
+repos/proflow/spec/.../CURRENT.md
+→ 当前阶段与接力导航
+
+Source / Test
+→ 当前实现和验证
+
+Package / Registry / Workspace
+→ 当前分发与安装事实
+
+Runtime / Browser / External Reality
+→ 用户今天真正运行到什么
+```
+
+同一篇长期文章里出现“某个 Gate 今天 PASS / NOT_RUN”，很快就会过期，并重新制造第二份 Current State。
+
+本文只保留一条不会因为项目进度变化而失效的证据纪律：
+
+```text
+设计存在
+!= 源码已实现
+
+源码已实现
+!= 测试已证明
+
+测试已通过
+!= 包已发布
+
+包已发布
+!= Workspace 已安装
+
+Workspace 已安装
+!= Runtime 已采用
+
+Runtime 已启动
+!= 真实产品路径已通过
+```
 
 ## 最后，用一句话理解 ProFlow
 
-ProFlow 的核心不是“多 Agent 自动做事”，而是把长期产品迭代拆成一组**有唯一事实 Owner、有明确授权边界、能恢复真实副作用、能独立验收、并且知道什么时候进入下一轮或停止**的流程。
+ProFlow 的核心不是“多 Agent 自动做事”，而是把长期产品迭代拆成一组：
+
+- 有唯一事实 Owner；
+- 有明确授权边界；
+- 能恢复真实副作用；
+- 能独立验收；
+- 能保留失败和历史；
+- 知道什么时候进入下一轮；
+- 也知道什么时候必须停止；
+
+的正式工程流程。
 
 ```text
 产品目标
