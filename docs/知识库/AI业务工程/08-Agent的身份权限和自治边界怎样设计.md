@@ -6,6 +6,18 @@ Agent 进入真实业务以后，安全问题很快会从“模型会不会说�
 
 Capability、Permission、Identity、Autonomy 经常被混在一起。把它们分开，是 Agent 安全工程的第一步。
 
+## 这篇文章只拥有“业务主体怎样被授权”这一层
+
+这里重点回答四个生产问题：**谁在做、为哪个 Task 做、当前允许做什么、最多允许自动做到哪一步。**
+
+几个相邻问题由别的 Owner 负责：
+
+- Agent、Skill、Tool、Script、Workflow、Permission 和 Policy 分别应该放在哪一层，由[Agent、Skill、Tool、Script 与 Workflow 的职责边界](../Agent-Skill-Tool-Workflow职责边界.md)完整解释；
+- 一个真实副作用已经开始以后，timeout、UNKNOWN、readback 和 safe retry 怎样处理，由[长期 Agent 怎样安全执行和恢复](../现代AI工程/09-长期Agent怎样安全执行和恢复.md)负责；
+- Prompt Injection、不可信数据、Tool Output 和供应链怎样攻击这些边界，由下一篇[Prompt Injection、数据与 Tool 风险怎样被系统控制](./09-Prompt-Injection数据与Tool风险怎样被系统控制.md)负责。
+
+这篇不会重新发明那几层机制，而是站在业务治理视角把 Identity、Task-scoped Permission、Risk Tier 和 Autonomy 连成一条授权链。
+
 ## Capability、Permission、Identity、Autonomy 各回答什么
 
 Capability 回答系统有没有完成某种动作的能力，例如：
@@ -400,6 +412,28 @@ Kill Switch（紧急停止开关）应该能快速：
 - stop rollout。
 
 它必须存在于模型外，并且可以在模型行为异常时立即生效。
+
+## 三个真实工程现场怎样把这条边界逼出来
+
+这些边界不是从安全术语表里拼出来的，几个真实系统都暴露过相同问题。
+
+**ProFlow 的 Product GPT 曾经拥有确定性的 Task bootstrap。** 当固定角色、binding 和 readiness 已经可以由程序可靠判断后，这部分 Authority 被迁回 Application / Task Owner，Product 只保留需求认知。这个变化证明：模型有 Capability，不等于它应该永久拥有改变正式事实的 Permission。完整演进见 [ProFlow｜为什么选择 ChatGPT，又为什么必须拥有自己的 Control Plane](../ProFlow/02-为什么选择ChatGPT又为什么必须拥有自己的Control-Plane.md)。
+
+**ChatWeb 的 MCP 实验把 discovery、readiness 和 execution authority 拆开了。** 一个 Tool 被发现、共享进程 READY，都不代表当前消费者已经拥有执行端点。历史上 Local Dev 只有 readiness 而没有共享 execution seam 时，正确结果就是 `UNAVAILABLE`；Browser 只读工具在真实 broker seam 成立后才可执行，MUTATING 工具在 Approval 机制建立前继续禁止。见 [为什么 Tool、MCP、Local Dev 最终退出 ChatWeb 产品边界](../ChatWeb/07-为什么Tool-MCP-LocalDev最终退出ChatWeb产品边界.md)。
+
+**ProFlow 的 UNKNOWN 副作用又证明 Permission 和 Recovery 不能混成一句“允许重试”。** 即使某个主体原本有权执行，调用 timeout 后也必须先回真实 Owner 确认 Effect 是否已经发生；权限合法不能替代现实核对。见 [长期 Agent 怎样安全执行和恢复](../现代AI工程/09-长期Agent怎样安全执行和恢复.md)。
+
+三类事故合在一起后，授权链才完整：
+
+~~~text
+Capability
+→ Identity / Task Scope
+→ Permission / Policy
+→ Approval when required
+→ Effect
+→ Evidence / Readback
+→ next Autonomy decision
+~~~
 
 ## 安全模型最后要回答三个问题
 

@@ -127,7 +127,7 @@ timeout
 
 因为 timeout 只说明调用方没有拿到确定结果，不证明副作用没有发生。
 
-Phase 2 已经出现 `UNCERTAIN`；08-06 的 `c3ea9bf`、`1a7244a` 和 08-07 的 `f45e7ce` 继续强化 durable receipt（持久回执：在调用方失联后仍可重新读取的执行结果记录）与 recovery。进入 Phase 3 后，Execution 把结果收敛成三态：
+Phase 2 已经出现 `UNCERTAIN`；08-06～08-07 的旧平台恢复实验继续强化 durable receipt（持久回执：在调用方失联后仍可重新读取的执行结果记录）与 recovery。原始旧仓已退休，因此这里保留这条演进事实，不再把不可回读的旧 SHA 当成 Evidence Anchor。进入 Phase 3 后，Execution 把结果收敛成三态：
 
 | 状态 | 含义 | 下一步 |
 | --- | --- | --- |

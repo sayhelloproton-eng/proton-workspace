@@ -77,7 +77,7 @@ model ability
 | Claude Code | 可编程 Coding Harness | Agent + 工程规则 | 怎样把团队经验、规则和生命周期控制编进 Agent |
 | Codex | 任务委派与执行系统 | Task + Delegation | 怎样把完整任务交给隔离工位并并行监督 |
 | OpenCode | 开放 Agent Runtime / Harness | Runtime + Ownership | 怎样让模型、Provider、Agent、Tool、Plugin 保持可替换 |
-| Cursor | AI IDE | Editor + Agent | 人怎样长期留在编辑器里和 Agent 高频协作 |
+| Cursor | AI IDE + Cloud Agent / Project | Editor + Agent + Project | 人怎样在 IDE 高频协作，同时把长任务、并行与自动化交给云端运行单元 |
 | Kiro | Spec-driven 开发产品 | Intent / Spec | 怎样先收紧需求、约束和计划，再进入执行 |
 | Qoder | 长任务 Coding Agent 平台 | Long-running Task | 一个任务怎样持续推进到交付 |
 | Qwen Code | 开放兼容型 Coding Harness | Runtime + Compatibility | 不同生态资产到底能迁到什么程度 |
@@ -118,7 +118,7 @@ OpenCode    → Harness / Runtime 到底由谁拥有和改造
 
 ### 其他产品有自己的优化中心
 
-Cursor 长期把 Human-Agent Interaction（人机协作过程）放在 IDE 内，因此 Editor state、代码 Context、Diff、Review 和即时修改是天然核心。
+Cursor 的历史起点确实是 Human-Agent Interaction（人机协作过程）和 IDE 内的 Editor state、代码 Context、Diff、Review、即时修改。**但这个判断不能再被写成它今天的能力边界。** 2026-09-10 发布的 Projects 已经把 Cursor 推到 Cloud Agents / coordinator / parallel delegation / shared long-term context；Automations 又允许按 Git、Slack、Webhook 或 schedule 触发后台 Cloud Agent。更准确的说法是：IDE 协作仍是 Cursor 的重要根基，但它已经明显向长期 Agent Workspace 与事件驱动 Runtime 扩展。
 
 Kiro 更强调 Intent / Spec 先行，处理的是一个常见失败源：目标和约束本身没有冻结，Agent 执行得越快，可能偏得越远。
 
@@ -175,7 +175,7 @@ OpenCode Core 与 Oh My OpenCode（OMO）也必须分开：前者是核心 Runti
 + 已知代价能够解释
 ```
 
-按 2026 年 9 月初的证据，Claude Code 的辨识度更接近 Agent Engineering / Harness 表达，Codex 更接近 Task Delegation 和多任务执行，OpenCode 更接近 Open Harness / Runtime Ownership，Cursor 更接近 Human-Agent IDE 协作。
+按 2026 年 9 月初的原始研究，Claude Code 的辨识度更接近 Agent Engineering / Harness 表达，Codex 更接近 Task Delegation 和多任务执行，OpenCode 更接近 Open Harness / Runtime Ownership，Cursor 当时更接近 Human-Agent IDE 协作。到 2026-09-20 再看，Cursor 的 Cloud Agents、Projects 与 Automations 已经明显扩张了它的 Runtime / Workspace 责任，所以这里保留的是“历史中心如何形成”的分析，不把早期标签当成当前能力上限。
 
 Qoder 的 Long-running Autonomous Delivery、Kiro 的 Spec-driven Agentic Development、Qwen Code 的 Compatibility-first Open Harness、CodeBuddy / WorkBuddy 的企业 Agent 路线、TRAE 从 Coding 向 Work 扩展的方向都已经很明显，但当时仍需要更多同规模、长期、独立使用证据校准强度。GitHub Copilot 的 GitHub 生态已经非常成熟，但其“多 Agent 工作入口”仍在快速演进。
 
@@ -560,7 +560,7 @@ General Work Harness
 
 | 主要目标 | 更值得优先观察的路线 | 真正要看的东西 |
 |---|---|---|
-| IDE 内持续协作 | Cursor | Editor Context、Diff、Review、人机往返 |
+| IDE 高频协作 + 长期 Project | Cursor | Editor Context、Diff、Cloud Agents、Projects、Automations、并行委派 |
 | 把完整任务委派出去 | Codex | Task、隔离执行、后台 / 云端任务、并行监督、验收 |
 | 把团队经验编进 Agent | Claude Code | Skill、Subagent、Hook、MCP、Project Instruction、Permission |
 | 自己掌握 Agent Stack | OpenCode | Provider routing、私有模型、Runtime 插件、Agent / Tool 解耦 |
@@ -578,6 +578,24 @@ Qwen Code   → Compatibility / Portable Core 验证
 ```
 
 如果这六个问题没有答案，平台选型很容易退化成品牌偏好。
+
+## 外部一手来源与时间边界
+
+这篇文章包含具体平台比较，因此不能只靠作者印象维护“当前事实”。下面保留一组**一手来源入口**，用于核验会快速变化的产品能力；正文中的产品标签只是某个时间点的分析，不是永久分类。
+
+- Claude / Agent Skills：<https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills>
+- OpenAI Codex CLI：<https://developers.openai.com/codex/cli>
+- OpenAI Codex Cloud：<https://developers.openai.com/docs/cloud>
+- OpenCode Provider：<https://opencode.ai/docs/providers>
+- Cursor Cloud Agents：<https://cursor.com/docs/cloud-agent>
+- Cursor Projects：<https://cursor.com/docs/agent/projects>
+- Cursor Automations：<https://cursor.com/docs/cloud-agent/automations>
+- Kiro：<https://kiro.dev/docs/>
+- Qoder：<https://docs.qoder.com/quick-start>
+- Qwen Code：<https://github.com/QwenLM/qwen-code>
+- GitHub Copilot：<https://docs.github.com/en/copilot>
+
+这些来源用于核验“平台当前提供什么”。本文自己的判断仍然是更高一层的问题：这些能力由 Harness、Runtime、Workspace 还是 Trust Runtime 承担，真实长任务里是否有足够 Evidence 支撑“擅长”这个结论。
 
 ## 平台快照会过期，但判断框架应该留下来
 

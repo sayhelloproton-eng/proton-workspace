@@ -357,7 +357,7 @@ ProFlow 长期区分三层来源：
 
 如果第一次接触 ProFlow，推荐先读 01，再按问题进入专题：
 
-1. [01｜ProFlow 当前端到端 Journey：从产品目标到真实交付，再回到下一轮](./01-ProFlow是怎么一步步长出来的.md) —— 先建立五领域、Task / Worker / Execution、产品续轮和 Monitor 的整体运行模型。
+1. [01｜ProFlow 当前端到端 Journey：从产品目标到真实交付，再回到下一轮](./01-ProFlow当前端到端Journey.md) —— 先建立五领域、Task / Worker / Execution、产品续轮和 Monitor 的整体运行模型。
 2. [02｜为什么选择 ChatGPT，又为什么必须拥有自己的 Control Plane](./02-为什么选择ChatGPT又为什么必须拥有自己的Control-Plane.md) —— 看复用与自研边界、Carrier、Action 与 Authority。
 3. [03｜多 Agent 如何从更多角色收敛成稳定协作系统](./03-多Agent如何从更多角色收敛成稳定协作系统.md) —— 看 Role / Worker / Conversation 身份与正式协作。
 4. [04｜ProFlow 浏览器扩展如何驱动浏览器内各条流程](./04-ProFlow浏览器扩展如何驱动浏览器内各条流程.md) —— 看 Browser Driver 的多 Lane、Observation / Mutation 和现实回读。

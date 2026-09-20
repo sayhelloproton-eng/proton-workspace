@@ -44,6 +44,42 @@ Monitor Loop：观察 → 决策 → 执行 → 验证 → 下一轮
 
 > **确定性的东西交给系统，不确定性的东西才交给模型；把 Token 花在思考上，而不是花在操作电脑上。**
 
+## 先分清这篇文章的两条主线
+
+这篇文章很长，因为同一段实践最后长出了两类不同知识。它们互相解释，但**不能互相冒充 Current Owner**。
+
+第一条是**本机工具与 Runtime 基础设施**：
+
+~~~text
+Local Dev / Desktop Commander
++ CodeGraph
++ Repomix
++ Playwright
++ tunnel-client / Broker / Watchdog
+→ Chat 怎样稳定获得本机与 Browser Reality
+~~~
+
+第二条是**Chat 本机工程执行方法**：
+
+~~~text
+Reality First
+→ Owner First
+→ Stage Freeze
+→ ASYNC Return Barrier
+→ whole-file transaction
+→ Acceptance
+→ Automation below model
+~~~
+
+本文保留两条线怎样从真实瓶颈和事故里共同长出来，方便读者理解“为什么”。但今天的硬规则和即时配置分别由真正 Owner 决定：
+
+- 当前 Chat 本机工程协议：`skills/chat-local-engineering-protocol/SKILL.md`；
+- MCP service 编排与恢复：`automation/gptweb-mcp/`；
+- 各 Tool 的具体 Runtime：`tools/**`；
+- Browser / UI Acceptance 方法：对应 Acceptance Skill 与真实 Browser evidence。
+
+因此这里出现的命令、版本、Runtime 状态和协议片段都必须带时间边界。**知识文章解释演进；Skill / Automation / Tool / Runtime 才拥有今天应该怎么执行。** 这样就不会因为一篇长文同时讲到了工具和方法，又悄悄形成第二份工程协议。
+
 ## 最开始真正浪费的不是 Token 数字，而是“人充当数据总线”
 
 最初的协作模式非常直接：
@@ -289,7 +325,7 @@ Desktop Commander 能较完整覆盖这些能力，因此成为 Local Dev 的底
 - **MCPJam**：更进一步把真实模型、跨客户端行为、OAuth 调试、Evals 和 CI Gate 放到一起；
 - **Docker MCP Toolkit**：Docker Desktop 4.62+ 中的 Beta 管理面，用于发现、配置和运行容器化 MCP Server；
 - **Docker MCP Gateway**：在 Client 和多个 Server 之间承担集中生命周期、路由、认证和配置；Docker 当前还把部分治理能力标成受限可用；
-- **MCP Registry**：官方公共 Server 元数据注册与发现层，当前仍处于 Preview，不能把它当成完全冻结的发布基础设施。
+- **MCP Registry**：官方公共 Server 元数据注册与发现层。2025 年发布时处于 Preview；截至 2026-09-20，官方 Registry reference 已暴露 `v1.0.0` API，而 MCP 协议与治理仍在持续演进。因此它可以作为分发与发现层观察，但不能因为版本号已经进入 1.0 就把 Registry 当成本机执行真值或假定所有生态兼容性已经冻结。
 
 这些工具很有价值，但它们不是一个东西，也不能自动替代当前的本机工具链。后面会单独解释它们各自适合解决哪一层问题。
 
@@ -1543,7 +1579,7 @@ reconcile_browser_side_effect(...)
 | MCPJam | 真模型 Tool Selection、参数、跨 Client、OAuth、Eval、CI | 自研 MCP 的行为 Eval 和跨 Client 回归 |
 | Docker MCP Toolkit | Docker Desktop 4.62+ Beta 的容器化 Server 管理、Catalog、Profile | Server 数量增长以后研究可移植运行环境 |
 | Docker MCP Gateway | 多 Server 集中生命周期、路由、认证 | 对比当前 gptweb-mcp + Browser Broker 的职责边界 |
-| Official MCP Registry | 当前 Preview 的公共 Server 元数据发布与发现 | 自研能力成熟以后考虑分发，不参与当前本机执行真值 |
+| Official MCP Registry | 官方公共 Server 元数据注册与发现；2025 发布时为 Preview，2026-09-20 reference 已暴露 v1.0.0 | 自研能力成熟以后考虑分发，不参与当前本机执行真值 |
 
 这里最值得吸收的不是“换掉现有系统”，而是三类成熟能力：
 
@@ -1819,3 +1855,5 @@ MCP / Runtime 承担硬不变量
   https://docs.docker.com/ai/mcp-catalog-and-toolkit/mcp-gateway/
 - Official MCP Registry
   https://registry.modelcontextprotocol.io/
+- MCP Roadmap（2026-08-22）
+  https://blog.modelcontextprotocol.io/posts/mcp-roadmap/

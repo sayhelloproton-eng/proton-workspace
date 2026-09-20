@@ -21,6 +21,12 @@ Agent 安全最容易被低估的地方，是把风险理解成“用户写了�
 
 > **即使某些恶意内容被模型误信，系统也要限制它能造成的最坏后果。**
 
+## 这篇文章拥有“威胁怎样穿过边界”这一层
+
+上一篇[Agent 的身份、权限和自治边界](./08-Agent的身份权限和自治边界怎样设计.md)已经负责“谁能做什么、什么风险需要审批”。[Agent、Skill、Tool、Script 与 Workflow 的职责边界](../Agent-Skill-Tool-Workflow职责边界.md)负责 Permission / Policy / Tool 应该落在哪个对象；[长期 Agent 怎样安全执行和恢复](../现代AI工程/09-长期Agent怎样安全执行和恢复.md)负责真实 Effect 发生后的 UNKNOWN 与 Recovery。
+
+这一篇不重新拥有那些机制，只追攻击链：**低信任内容怎样试图升级成控制指令，数据、Memory、Tool、Connector 和网络怎样扩大后果，以及系统怎样通过多层硬边界限制 blast radius。**
+
 ## Prompt Injection 本质上是控制权越级
 
 外部数据本来应该只是 Data Plane。
@@ -371,6 +377,26 @@ Release
 否则事故发生以后，系统无法回答“谁以什么权限做了什么”。
 
 Audit 不是普通 Debug Log 的同义词。
+
+## 真实工程事故为什么也要按攻击链思考
+
+下面几个事故并不都是恶意 Prompt Injection，但它们证明了同一个安全事实：**只要边界允许低信任或内部对象越级，攻击者并不是制造风险的必要条件；普通实现错误已经足够暴露这条链。**
+
+**ChatWeb 曾把内部 Citation 的 `providerId="web"` 带进 public SSE。** 这不是一次数据外泄事故，但它证明“内部对象可以直接序列化给 Browser”这个假设不成立。修复不是继续加字段黑名单，而是建立 explicit internal → public projection，只把 public contract 允许的字段投影出去。见 [Provider、Context、RAG、Citation 如何组合而不泄漏运行时](../ChatWeb/03-Provider-Context-RAG-Citation如何组合而不泄漏运行时.md)。
+
+**ChatWeb 的第一版 Tool Registry 曾把 provider discovery 自动变成 executable capability。** 如果外部 MCP Server 新增一个高风险 Tool，它就可能因为“被发现”而进入执行范围。最终改成 Runtime allowlist，并明确：
+
+~~~text
+discovery
+≠ enablement
+≠ approval
+~~~
+
+见 [为什么 Tool、MCP、Local Dev 最终退出 ChatWeb 产品边界](../ChatWeb/07-为什么Tool-MCP-LocalDev最终退出ChatWeb产品边界.md)。
+
+**ProFlow 的 Browser Delivery 事故则证明 Effect Evidence 不能被下游错误反向改写。** 页面副作用已经发生以后，下游模型或 Action failure 不能把 Browser submit 重新解释成“没执行”，否则恢复逻辑就可能重复提交。同一条纪律用于安全和可靠性：先承认现实，再根据 Policy 决定下一步。见 [ProFlow 怎样从一次跑通走向长期可运行的工程系统](../ProFlow/05-ProFlow怎样从一次跑通走向长期可运行的工程系统.md)。
+
+这些真实事故让 Prompt Injection 防御不再停在“模型会不会听坏指令”。真正要保护的是每一条从 Data → Decision → Permission → Effect → Evidence 的跨边界路径。
 
 ## Red Team 应该测试完整攻击链
 

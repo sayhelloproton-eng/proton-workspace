@@ -179,7 +179,7 @@ Phase 2 后期仍有很多未知：FAST / REASON、Provider、routing、schedule
 experiments/execution-flow-runtime/
 ```
 
-lab.1～13 用于快速验证。到 EF-6，`310d66f` 明确停止 lab.14，并把结果分类：
+lab.1～13 用于快速验证。到 EF-6 的历史 handoff 阶段，项目明确停止 lab.14，并把结果分类；这段实验发生在已退休的旧来源中，因此保留裁决，不再把旧 SHA 当成今天仍可回读的 Git 证据：
 
 ```text
 ADOPT AS-IS

@@ -314,6 +314,31 @@ Prompt-first
 
 后面的抽象不会把前面的抽象删除。今天一个成熟系统仍然可能同时使用 Rule / SQL、Prompt、Workflow、Agent、Runtime、Subagent 和 Platform Service，区别只是每一种问题停在自己的最低充分复杂度。
 
+## 一手来源与时间边界
+
+这条时间线包含论文、协议和产品生态的外部事实。正文的责任是解释“为什么工程责任会继续加层”，不是让作者自己的归纳替代原始来源。几个关键历史节点至少可以回到下面这些一手材料：
+
+- Transformer：Vaswani 等人的 *Attention Is All You Need*，<https://arxiv.org/abs/1706.03762>
+- BERT：Devlin 等人的 *BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding*，<https://arxiv.org/abs/1810.04805>
+- GPT-3 / few-shot scaling：OpenAI *Language Models are Few-Shot Learners*，<https://openai.com/index/language-models-are-few-shot-learners/>
+- MCP：官方 2026 roadmap，<https://blog.modelcontextprotocol.io/posts/mcp-roadmap/>
+- A2A：官方协议规范，<https://a2a-protocol.org/dev/specification/>
+
+这些链接不是为了把整篇改成论文综述，而是建立 Claim 强度边界：
+
+~~~text
+论文 / 规范明确提出的事实
+→ 可以按对应时间点陈述
+
+多个产品同时出现的工程趋势
+→ 明确写成观察与归纳，不冒充统一行业标准
+
+2026 年仍快速变化的产品能力
+→ 使用前重新核验，不把本文时间线当 Current Product Documentation
+~~~
+
+因此“Transformer 出现于 2017”“BERT / GPT 路线怎样分化”“MCP / A2A 解决什么协议层问题”可以回到一手来源；“行业正在从 Graph-first 走向 Runtime-first”这类说法则仍然是本文基于多个工程系统做出的分析判断，两者不使用同一种事实强度。
+
 ## 17 篇正文怎样接到这条历史线
 
 | 文章 | 在历史线中主要负责什么 |
