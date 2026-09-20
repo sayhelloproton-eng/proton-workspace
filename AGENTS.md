@@ -28,6 +28,8 @@ This repository is the personal multi-product engineering workspace `proton-work
 4. 每个公开主题都应能回到真实项目、代码、测试、运行、事故、Eval 或其他可核验事实；计划和推断不得写成已完成能力。
 5. 内部工作材料应服务本人和 AI 的持续工程工作，并与公开知识库的阅读结构解耦。
 6. 最终知识结构必须基于真实迁移后的项目与工程资产确认，不为了目录对称提前制造空分类。
+7. 一级正式阅读 / 发布遍历顺序由 `docs/知识库/_order.json` 单一拥有。当前一级固定为 `智能体工程探索`、`现代AI工程`、`Agent工程`、`工程工具与运行时`、`ProFlow-RAG`、`ChatWeb`、`AI业务工程`、`术语表`；`智能体工程探索/README.md` 是 Space 首文档正文，ProFlow 各篇直接挂在它下面。
+8. 同一个正式知识节点不得同时由“根文件 + 同名目录”双重拥有；目录型主题统一使用 `<目录>/README.md` 作为该节点正文。
 
 ## Hard boundaries
 

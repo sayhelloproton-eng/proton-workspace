@@ -1,38 +1,77 @@
 # ProFlow Browser Extension automation
 
-本目录统一拥有 ProFlow Browser Extension 的稳定机械流程：registration/probe/reload/version reconciliation、Monitor 只读诊断快照，以及 Monitor shift 的正式 boot-proof publication。
+本目录只拥有 **Browser Extension 运维与兼容入口**。Monitor v4 的正式 Maintenance 状态/生命周期 helper 已统一迁到：
 
-Extension reload：
+`/Users/agent/Desktop/proton-workspace/automation/proflow-maintenance/`
+
+## Extension reload
 
 ```text
 node automation/proflow-browser-extension/reload.mjs --workspace /Users/agent/Desktop/proton-workspace
 ```
 
-当 Acceptance 已证明 exact registration/path 正确、且 source/deployment package fingerprint 存在同版本字节漂移时，可显式使用：
+当 Acceptance 已证明 exact registration/path 正确，且当前 evidence 明确要求 reload 时，可显式使用：
 
 ```text
-node automation/proflow-browser-extension/reload.mjs --workspace /Users/agent/Desktop/proton-workspace --force
-```
-
-`--force` 只跳过“loaded version 已等于 expected version”这一短路判断；它仍然先验证唯一 registration/path，并且仍只执行同一 registration 的 `chrome.runtime.reload()`，绝不 uninstall/reinstall。
-
-Monitor Debug Collector：
-
-```text
-node automation/proflow-browser-extension/monitor-debug.mjs --workspace /Users/agent/Desktop/proton-workspace
-```
-
-可选 `--run-id`、`--chat-ref`、`--since-minutes`。Collector 只读收集 Bridge session、Monitor config/run/observation/outbox、Extension verification 和最近 Monitor structured logs；credential 只在进程内用于 loopback owner 调用，绝不输出 token，也不修改 Monitor/Browser 状态。
-
-Monitor boot proof：
-
-```text
-node automation/proflow-browser-extension/monitor-boot-proof.mjs \
+node automation/proflow-browser-extension/reload.mjs \
   --workspace /Users/agent/Desktop/proton-workspace \
-  --shift-id <current-shift-id> \
-  --authorities-read
+  --force
 ```
 
-`monitor-boot-proof.mjs` 只允许在 Monitor Chat 已真实完成 `proflow-chat-loop` 固定 authority + `CURRENT.REQUIRED_CONTEXT` 读取后调用。`--authorities-read` 是调用 Chat 对该事实的显式确认；helper 会再次机械验证固定 authority、CURRENT 动态 REQUIRED_CONTEXT 与 handoff 路径均存在，从正式 Monitor owner 唯一解析 run/chat identity，并且只调用 `shift.bootProof`。它**不会**调用 `shift.activate`、不会改 runtime JSON、不会提交 Chat 文本；ACTIVE 与后续 neutral `TURN_WAKE` 必须继续由 Platform Monitor coordinator 正式驱动。若环境中同名 shift 不唯一，可显式补 `--run-id`；重复调用对已有 bootProof 只做只读回报。
+`reload.mjs` 仍是 Extension 运维 owner；它不拥有 Monitor state、drive decision、handoff 或 takeover。
 
-真实 Acceptance 调用 reload 之前，必须先按 Acceptance Skill 获得 `exclusive` Browser lease，并且当前证据真的要求 RELOAD。Monitor Debug Collector 是 read-only Engineering 诊断，不需要借 reload 制造证据。`reload.mjs --self-test` 与 `monitor-boot-proof.mjs --self-test` 只测本地 contract/helper，不触发真实 Chrome 或 Monitor 状态变更。
+真实 Acceptance 调用 reload 前必须按 Acceptance Skill 获取所需 Browser lease。不得把 reload 当作调试 transport。
+
+## Monitor compatibility entrypoints
+
+以下旧路径只为历史调用兼容，不再拥有业务语义：
+
+### boot proof
+
+```text
+node automation/proflow-browser-extension/monitor-boot-proof.mjs ...
+```
+
+该入口只转发到：
+
+`automation/proflow-maintenance/monitor-boot-proof.mjs`
+
+正式 operation 是 `bootProof.record`，不是 legacy `shift.bootProof`。
+
+### debug
+
+```text
+node automation/proflow-browser-extension/monitor-debug.mjs
+```
+
+该入口只读新 `config.read/current.read/state.read/notification.readOutbox`，不再读取 legacy run/observation truth。
+
+### initial seed
+
+`monitor-initial-seed.mjs` 已正式退役并 fail closed。
+
+Initial Monitor 必须使用：
+
+```text
+node automation/proflow-maintenance/monitor-injection.mjs bootstrap \
+  --initial \
+  --shift-id <shiftId> \
+  --text-file <fresh-bootstrap-context>
+```
+
+随后由 Browser scheduler → Execution `monitor.chat.create` 创建真实 Chat，并在 APPLIED settlement 中注册真实 chatId。
+
+## Monitor v4 owner boundary
+
+- Browser Extension：页面观察、timing、physical carrier。
+- Platform Host：authenticated thin relay。
+- Node Monitor state：唯一 Monitor business state writer。
+- Execution Runtime + Browser executor：create/submit side-effect truth。
+- Model：工程语义、continuation intent、handoff 内容、semantic notification request。
+
+本目录不得恢复：
+- `run.create/run.list/run.read`
+- `shift.bootProof/shift.activate`
+- independent Monitor polling coordinator
+- direct Monitor JSON writes
+- standalone production `chat.register`

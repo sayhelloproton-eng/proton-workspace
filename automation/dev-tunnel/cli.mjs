@@ -10,7 +10,10 @@ const operation = rawOperation === '--help' || rawOperation === '-h' ? 'help' : 
 const stateRoot = join(dirname(fileURLToPath(import.meta.url)), '.runtime');
 const output = value => console.log(JSON.stringify(value));
 const resolved = operation === 'help' ? null : await resolveDevTunnelCli();
-const run = argv => new Promise(resolve => execFile(resolved.command, argv, { timeout: 30_000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => resolve({ code: error ? (error.killed ? null : error.code) : 0, stdout, stderr })));
+const DEFAULT_COMMAND_TIMEOUT_MS = 30_000;
+const AUTH_QUERY_TIMEOUT_MS = 90_000;
+const REMOTE_QUERY_TIMEOUT_MS = 180_000;
+const run = (argv, timeoutMs = DEFAULT_COMMAND_TIMEOUT_MS) => new Promise(resolve => execFile(resolved.command, argv, { timeout: timeoutMs, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => resolve({ code: error ? (error.killed ? null : error.code) : 0, stdout, stderr })));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const interactive = argv => new Promise((resolve, reject) => {
   const child = spawn(resolved.command, argv, { stdio: 'inherit' });
@@ -28,7 +31,7 @@ function parsed(result) {
   return JSON.parse(result.stdout);
 }
 async function auth() {
-  const result = await run(['user', 'show', '--json']);
+  const result = await run(['user', 'show', '--json'], AUTH_QUERY_TIMEOUT_MS);
   let status = '';
   try { status = JSON.parse(result.stdout).status ?? ''; } catch {}
   const diagnostic = `${status}\n${result.stderr}`;
@@ -71,7 +74,7 @@ async function waitForExit(pid, timeoutMs = 2000) {
   try { process.kill(pid, 0); return false; } catch { return true; }
 }
 async function remoteTunnel(tunnel) {
-  const result = await run(['show', tunnel, '--json']);
+  const result = await run(['show', tunnel, '--json'], REMOTE_QUERY_TIMEOUT_MS);
   if (result.code !== 0) return { result, fact: null };
   const raw = parsed(result), fact = raw.tunnel ?? raw;
   if (typeof fact.tunnelId !== 'string' || !(fact.tunnelId === tunnel || fact.tunnelId.startsWith(`${tunnel}.`))) throw new Error('TUNNEL_IDENTITY_MISMATCH');
@@ -147,7 +150,7 @@ try {
       } else if (['ensurePort', 'discoverPublicBaseUrl'].includes(method)) {
         const port = payload.port;
         if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT_INVALID');
-        const raw = parsed(await run(['port', 'list', tunnel, '--json']));
+        const raw = parsed(await run(['port', 'list', tunnel, '--json'], REMOTE_QUERY_TIMEOUT_MS));
         const ports = Array.isArray(raw) ? raw : raw.ports ?? raw.tunnel?.ports ?? (/no ports found/i.test(raw.warning ?? '') ? [] : undefined);
         if (!Array.isArray(ports)) throw new Error('PORT_LIST_INVALID');
         const existing = ports.find(item => item.portNumber === port);
@@ -173,7 +176,7 @@ try {
       if (remote.result.code === null || !/not found|does not exist|could not be found/i.test(remote.result.stderr)) throw new Error('TUNNEL_STATE_UNKNOWN');
       parsed(await run(['create', tunnel, ...(args.includes('--public') ? ['--allow-anonymous'] : []), '--json']));
     }
-    const raw = parsed(await run(['port', 'list', tunnel, '--json']));
+    const raw = parsed(await run(['port', 'list', tunnel, '--json'], REMOTE_QUERY_TIMEOUT_MS));
     const ports = Array.isArray(raw) ? raw : raw.ports ?? raw.tunnel?.ports ?? (/no ports found/i.test(raw.warning ?? '') ? [] : undefined);
     if (!Array.isArray(ports)) throw new Error('PORT_LIST_INVALID');
     const existing = ports.find(item => item.portNumber === port);
