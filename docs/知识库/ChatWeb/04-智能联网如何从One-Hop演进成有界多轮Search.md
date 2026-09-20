@@ -36,7 +36,7 @@ Browser webSearchMode=off|auto
 → final generation
 ```
 
-AUTO 不保证一定 Search，也不保证固定轮数。默认 `WEB_SEARCH_MAX_ROUNDS=6`，硬上限 10；`WEB_SEARCH_MAX_RESULTS` 默认 5、上限 10；query 最大 512 chars；同一 run 的归一化重复 query 必须停止搜索。所有这些 budget（预算）都归 server config，Browser 和模型不能修改。
+AUTO 不保证一定 Search，也不保证固定轮数。轮数、每轮结果数量和 query 长度都由 server config 设置默认值与硬上限；同一 run 的归一化重复 query 必须停止搜索。具体当前数值属于产品配置事实，应回到 ChatWeb 当前 Spec / config 核对，Browser 和模型都不能修改这些 budget（预算）。
 
 “多轮”因此不是无限自主，而是**模型可以继续判断，Runtime 始终拥有次数、输入和终止边界。**
 

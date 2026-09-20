@@ -795,7 +795,7 @@ ProFlow 的长期任务就属于这种情况。
 |---|---|---|---|---|---|
 | 技术研究、架构判断、知识提炼 | L2 Chat / 高能力 Model | Chat 负责分析、综合、写作和决策；正式结论再进入 Git 知识 | 纯 Script 无法完成开放式语义判断 | 大部分工作没有长期业务状态，不需要 Task Runtime | 研究任务开始跨天自动运行、需要事件等待、独立恢复和正式状态 |
 | 本机工程修改与真实验证 | L3～L4 Agent + Tool | Chat 通过 Local Dev、CodeGraph、Repomix、Playwright 直接读取和操作真实工程；Skill 约束方法，Automation 承担机械步骤 | 只聊天会重新变成人工搬运文件、日志和 Browser 结果 | 每一次代码修改都建持久 Task 会增加无收益的状态和治理成本 | 大量工程任务必须跨 Session 持续、并发执行，并且需要统一 Task 身份和恢复 |
-| Motor / Monitor 自迭代 | L4 为主，带少量 L5 特征 | Chat 能观察真实系统、使用本机工具、执行、验收，并通过 loop / handoff 继续下一轮 | 单纯 Chat 建议无法形成观察→执行→验证→再决策闭环 | 当前不需要为了 Motor 再复制一套通用 Task Platform；长期业务状态仍应由真正的产品 Owner 承担 | Motor 自身出现独立长期 Task、并发 Worker、正式审批、跨 Session 状态和恢复需求 |
+| Monitor 自迭代 | L4 为主，带少量 L5 特征 | Chat 能观察真实系统、使用本机工具、执行、验收，并通过 loop / handoff 继续下一轮 | 单纯 Chat 建议无法形成观察→执行→验证→再决策闭环 | 当前不需要为了 Monitor 再复制一套通用 Task Platform；长期业务状态仍应由真正的产品 Owner 承担 | Monitor 自身出现独立长期 Task、并发 Worker、正式审批、跨 Session 状态和恢复需求 |
 | ProFlow 的长期产品迭代 | L5 Task Control + 有界 Multi-Agent | Task / Node、Role / Worker Binding、正式 Handoff、WAITING / FAILED / REOPEN、`runNo`、Browser Reality 等已经成为产品事实 | Session 和 Prompt 无法可靠承载长期身份、失败历史和恢复 | 还不能仅因为 ProFlow 一套产品已经复杂，就宣称需要通用 L6 平台 | 第二个真实产品复用同一 Task / Approval / Evidence / Recovery 合同，并证明共享比复制更便宜 |
 | ChatWeb 产品本身 | 普通应用 + 按需 L4 Tool 能力 | Conversation、Streaming、Provider、RAG、Web Search、Vision / File / Voice 等由 Chat Runtime 组合 | 需要真实产品 Runtime，不能只靠一次模型调用 | ChatWeb 的产品目标不是建设通用 Agent Control Plane，不应把 ProFlow 的 Task 模型硬塞进去 | 产品真的出现长任务、后台 Agent、等待 / 恢复，并且这些成为用户可见核心语义 |
 | ProFlow RAG | Capability Service（能力服务） | 独立负责 Knowledge、Retrieval、Evidence、Context、Citation 和 API；质量通过 Eval 与维护流程治理 | 普通 Prompt 不能替代稳定检索和引用服务 | RAG 服务本身不需要为了“AI 化”拥有 Agent、Workflow 或多角色 | 出现必须由动态 Agent 长期规划检索、跨步骤研究并持久恢复的业务需求 |
@@ -829,7 +829,7 @@ ProFlow 的长期任务就属于这种情况。
 
 这也解释了为什么旧 `ai-agent-platform` 拆掉以后，并不是“平台方向失败了”。真正被保留下来的能力反而更清楚：应该属于产品的回到产品，应该属于共享工程基础设施的进入 workspace，已经确定的机械步骤下降为 Automation，只有仍然需要动态判断的部分留给 Agent。
 
-所以按我当前的需求，最重要的并不是“还差哪一个大平台模块”，而是继续保持这条边界：**ProFlow 为已经真实出现的长期任务复杂度付费；Motor 为观察、判断和迭代闭环付费；公共工作区只共享真正重复的能力。等第二个产品把同一套控制问题再次逼出来，再购买更高一级的平台复杂度。**
+所以按我当前的需求，最重要的并不是“还差哪一个大平台模块”，而是继续保持这条边界：**ProFlow 为已经真实出现的长期任务复杂度付费；Monitor 为观察、判断和迭代闭环付费；公共工作区只共享真正重复的能力。等第二个产品把同一套控制问题再次逼出来，再购买更高一级的平台复杂度。**
 
 ---
 

@@ -75,7 +75,7 @@ DO_NOT_REPEAT
 
 项目甚至做过 Lost-context Simulation（失忆上下文模拟：故意不给新 Chat 完整历史，只给正式入口材料，验证能否恢复执行）。这使“跨 Chat 连续”第一次从写文档变成可验收能力。
 
-## Monitor 换班现在解决的是运行协调，不是本机工具撤权
+## Monitor 换班解决的是运行协调，不是本机工具撤权
 
 Monitor（监控工程 Chat：观察、修复和验证 ProFlow 自身的工程会话）进入长周期后，单纯 handoff 仍然不够。系统还需要知道当前 Run（一次连续自迭代运行）和 Shift（其中一班 Chat 值守周期）是谁、交接材料在哪里、新 Chat 是否真的完成了上下文恢复，以及旧班何时进入 retired 状态。
 
@@ -94,11 +94,11 @@ Monitor（监控工程 Chat：观察、修复和验证 ProFlow 自身的工程�
 → 旧班 RETIRED
 ```
 
-但 2026-09-17 的当前设计已经明确删除了早期“Monitor 接班时撤销旧 Chat Local Dev 权限、再给新 Chat 发 lease”的方案。
+2026-09-17 的一次设计收敛明确删除了早期“Monitor 接班时撤销旧 Chat Local Dev 权限、再给新 Chat 发 lease”的方案。
 
-Local Dev 现在是通用、无状态 MCP（模型上下文协议工具：让 Chat 直接使用本机 Desktop Commander 能力），Monitor 不控制它，旧班和新班都可以正常使用。Run / Shift / boot / takeover 是 Monitor 的业务协调事实，不是本机工具授权。
+这次收敛以后，Local Dev 被明确定位为通用、无状态 MCP（模型上下文协议工具：让 Chat 直接使用本机 Desktop Commander 能力），Monitor 不控制它，旧班和新班都可以正常使用。Run / Shift / boot / takeover 是 Monitor 的业务协调事实，不是本机工具授权。
 
-Extension 内部仍有一个 monitor memory lock（监控内存锁：只在当前 Service Worker 进程内抑制重复页面动作）。它初始为 unlocked，执行受控页面动作时临时 acquire，`finally` 后 release；Extension restart 后重新 unlocked。当前设计接受 Monitor Chat 可能存在竞态，不用持久 CAS lock、lease 或 broker fencing 假装全局排他。
+Extension 内部仍有一个 monitor memory lock（监控内存锁：只在当前 Service Worker 进程内抑制重复页面动作）。它初始为 unlocked，执行受控页面动作时临时 acquire，`finally` 后 release；Extension restart 后重新 unlocked。这版设计接受 Monitor Chat 可能存在竞态，不用持久 CAS lock、lease 或 broker fencing 假装全局排他。
 
 因此这一版长期安全依靠的是：
 
@@ -111,7 +111,7 @@ Owner current fact
 + 明确 handoff / boot / shift 状态
 ```
 
-而不是“只有一个 Chat 在操作系统层面拥有写权限”。这也是为什么 4 小时 rotation 的真实验收仍然重要：它要证明交接和 Browser 效果真的成立，而不是证明旧 Chat 被剥夺了 Local Dev。
+而不是“只有一个 Chat 在操作系统层面拥有写权限”。这也是为什么 rotation 需要真实验收：它要证明交接和 Browser 效果真的成立，而不是证明旧 Chat 被剥夺了 Local Dev。
 
 ## 第二种连续性：timeout 最危险的不是失败，而是不知道有没有发生
 
@@ -198,7 +198,7 @@ Real-3+
 
 这样失败时可以继续问：供应链错、外部 SaaS 资源错，还是业务 Journey 错，而不是每次都把所有问题扔给“端到端失败”。
 
-截至 2026-09-17，Real-1 已 PASS，Real-2 已 PASS / FROZEN，Real-3 已 PASS / CLOSED，Phase 3 已封版。这些结果证明 Phase 3 基线，不自动替 Phase 4 的新流程做验收。
+Phase 3 封版时，Real-1 / Real-2 / Real-3 分别作为供应链、远端资源和产品 Journey 的分层 Gate 使用。它们的价值在于把“哪一层现实失败”分开定位；某次历史 Gate PASS 只证明当时 baseline，不自动替后续阶段的新流程做验收。实时 Gate 状态由 ProFlow 的 CURRENT / owning Spec / Runtime Evidence 负责。
 
 ## 成功必须回到第一次使用的普通用户视角
 
@@ -272,7 +272,7 @@ Product Gap Review（产品差距复盘：基于上一轮真实产品结果判�
 
 Monitor 不是第四个业务 Agent，也不替 Product / Dev / Test 做目标产品工作。它支撑产品飞轮能够长期继续。
 
-截至 2026-09-17，Monitor Source Gate 和 Workspace / Runtime Adoption 都已经 PASS；Monitor Real Acceptance 仍为 `NOT_RUN`。当前 Workspace 配置仍故意保持 `enabled=false / notificationsEnabled=false`，所以长期 Monitor 尚未正式开启。真实 Browser turn loop、飞书 delivery 和 4h rotation 仍需要独立证据，不能从源码和 adoption PASS 推导。
+Monitor 这条工程飞轮同样只在机制层说明“为什么需要 Source Gate、Runtime Adoption 和 Real Acceptance 分层”。这些 Gate 此刻是否 PASS、Monitor 是否启用、通知是否开启以及 rotation 是否已经真实通过，都属于滚动项目事实，统一回到 ProFlow 的 CURRENT、owning Spec 和 Runtime / Browser Evidence 判断。长期知识不复制这些实时状态。
 
 ## 一条长期运行的 Authority Ladder
 
@@ -317,4 +317,4 @@ Owner business transition
 
 这篇文章主要吸收：`03-失败路线与架构重启.md`、`05-自动化验收Harness演进.md`、`08-公共上下文从Handoff到Executable-Project-Memory.md`、`17-从UNCERTAIN到Reality-Reconciliation.md`，并吸收原长期运行总文档中 Monitor rotation、Product Gap Review 和真实验收的独有内容。
 
-这些历史材料解释长期可靠机制为什么出现；某个当前 Task、Monitor、Acceptance gate 是否已经通过，仍应以当前 Owner fact、Runtime 和真实证据为准。Monitor 的 2026-09-17 当前边界以当日 `CURRENT.md` 和 owning Module 事实为准，不沿用已经废止的 Local Dev lease / fencing 方案。
+这些历史材料解释长期可靠机制为什么出现；某个当前 Task、Monitor、Acceptance gate 是否已经通过，仍应以当前 Owner fact、Runtime 和真实证据为准。2026-09-17 关于 Local Dev lease / fencing 的设计收敛只作为历史演进锚点：它说明为什么“班次协调”与“本机工具授权”最终被拆开；实时 Monitor 状态仍由 CURRENT 和 owning Module 负责。

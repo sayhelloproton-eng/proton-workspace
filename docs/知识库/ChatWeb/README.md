@@ -4,7 +4,7 @@ ChatWeb 最初很容易被理解成“ProFlow RAG 的聊天前端”，但真正
 
 因此 ChatWeb 最终形成的是一个独立的 Chat Runtime（聊天运行时：负责一次聊天从请求、上下文解析、模型生成到终态落地的服务端执行边界）和对应的 Web Chat 产品。RAG（检索增强生成）只是一个可以移除的外部 Context Provider（上下文提供者），而不是整个产品的中心。
 
-这组文章记录稳定的产品与工程认知，不复制当前 Spec（正式设计规范）。工作树状态、ChatGPT Sites 发布状态和真实 Runtime 仍以 `/Users/agent/Desktop/proton-workspace/repos/chatweb` 的 Spec、CURRENT、源码、测试和真实 Browser 证据为准。
+这组文章记录稳定的产品与工程认知，不复制当前 Spec（正式设计规范）。工作树状态、ChatGPT Sites 发布状态和真实 Runtime 仍以产品仓库 `repos/chatweb` 中的 Spec、CURRENT、源码、测试和真实 Browser 证据为准。
 
 ## 为什么正文会保留“怎么走到这里”
 
