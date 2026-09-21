@@ -15,6 +15,8 @@ async function main() {
     printJson(await client.invoke("config.read"));
     return;
   }
+  if (Object.prototype.hasOwnProperty.call(patch, "enabled"))
+    throw new Error("MONITOR_CONFIG_LEGACY_ENABLED_FORBIDDEN");
   const requestId =
     valueArg("--request-id") ?? stableRequestId("config.update", patch);
   printJson(await client.invoke("config.update", { requestId, patch }));

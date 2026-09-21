@@ -33,8 +33,8 @@ importers:
         specifier: 0.1.36
         version: 0.1.36
       '@tomflow/proflow-execution-browser-extension':
-        specifier: 0.1.67
-        version: 0.1.67
+        specifier: 0.1.68
+        version: 0.1.68
       '@tomflow/proflow-execution-contracts':
         specifier: 0.1.11
         version: 0.1.11
@@ -578,11 +578,11 @@ packages:
     resolution: {integrity: sha512-yHPxdG8Pg5bfWfC11QifIddo75Aaeq4MMIYKmVabEPRR9FLWwiebo37CujDTuRAUA6BukIJyVKjV2xruEZeSOA==}
     hasBin: true
 
-  '@tomflow/proflow-execution-browser-extension@0.1.66':
-    resolution: {integrity: sha512-WIU3tXt2N5APZcWbCrYqv+4GfroAHLfMHl1t574dyo5Sw1zBWji5ypfgyfV7Kreh4qmR4z+ODhFQHnT1wZTFVg==}
-
   '@tomflow/proflow-execution-browser-extension@0.1.67':
     resolution: {integrity: sha512-7JWWHi2KqCS5oq2es0PCKHeMiYV1eLzEW6Z/N586qLIJPm5nDq7kTy7Z+b98KTHDTlILSvhJ5QbBdSPp4rnefQ==}
+
+  '@tomflow/proflow-execution-browser-extension@0.1.68':
+    resolution: {integrity: sha512-cFHcdm4rJsb4uVXI3hXjGHsgBhUZd6jk2Bf5RECaVvrvOYlondjrnqOuKAwACaYq3l/KPcblKd4U7J93l2j0hQ==}
 
   '@tomflow/proflow-execution-contracts@0.1.11':
     resolution: {integrity: sha512-KgGEjNcz56OyZ6Cm0ZF0gi+cNJ3OkhAMelTA6JZlM2KTri49vqN4TUNg9ELiKQbROoq+Gz0bRQyxpDiVlIk9pQ==}
@@ -1496,7 +1496,7 @@ snapshots:
   '@tomflow/proflow-agent-controller-dev@0.1.21':
     dependencies:
       '@tomflow/proflow-agent-runtime': 0.1.17
-      '@tomflow/proflow-execution-browser-extension': 0.1.66
+      '@tomflow/proflow-execution-browser-extension': 0.1.67
       '@tomflow/proflow-module-contract': 0.1.13
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -1511,7 +1511,7 @@ snapshots:
   '@tomflow/proflow-agent-product@0.1.20':
     dependencies:
       '@tomflow/proflow-agent-runtime': 0.1.17
-      '@tomflow/proflow-execution-browser-extension': 0.1.66
+      '@tomflow/proflow-execution-browser-extension': 0.1.67
       '@tomflow/proflow-module-contract': 0.1.13
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -1533,7 +1533,7 @@ snapshots:
   '@tomflow/proflow-agent-test-ops@0.1.21':
     dependencies:
       '@tomflow/proflow-agent-runtime': 0.1.17
-      '@tomflow/proflow-execution-browser-extension': 0.1.66
+      '@tomflow/proflow-execution-browser-extension': 0.1.67
       '@tomflow/proflow-module-contract': 0.1.13
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -1554,7 +1554,7 @@ snapshots:
       '@tomflow/proflow-module-contract': 0.1.13
       zod: 4.1.12
 
-  '@tomflow/proflow-execution-browser-extension@0.1.66':
+  '@tomflow/proflow-execution-browser-extension@0.1.67':
     dependencies:
       '@tomflow/proflow-execution-contracts': 0.1.11
       '@tomflow/proflow-execution-local': 0.1.16
@@ -1564,7 +1564,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@tomflow/proflow-execution-browser-extension@0.1.67':
+  '@tomflow/proflow-execution-browser-extension@0.1.68':
     dependencies:
       '@tomflow/proflow-execution-contracts': 0.1.11
       '@tomflow/proflow-execution-local': 0.1.16
@@ -1591,7 +1591,7 @@ snapshots:
 
   '@tomflow/proflow-execution-runtime@0.1.19':
     dependencies:
-      '@tomflow/proflow-execution-browser-extension': 0.1.66
+      '@tomflow/proflow-execution-browser-extension': 0.1.67
       '@tomflow/proflow-execution-contracts': 0.1.11
       '@tomflow/proflow-execution-local': 0.1.16
       '@tomflow/proflow-model-contracts': 0.1.10
@@ -1635,7 +1635,7 @@ snapshots:
   '@tomflow/proflow-platform-host@0.1.31':
     dependencies:
       '@tomflow/proflow-agent-runtime': 0.1.17
-      '@tomflow/proflow-execution-browser-extension': 0.1.66
+      '@tomflow/proflow-execution-browser-extension': 0.1.67
       '@tomflow/proflow-execution-contracts': 0.1.11
       '@tomflow/proflow-module-contract': 0.1.13
       '@tomflow/proflow-task-migration-runner': 0.1.11

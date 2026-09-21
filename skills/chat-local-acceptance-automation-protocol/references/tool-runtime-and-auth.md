@@ -37,33 +37,30 @@ owner READY 不等于 Browser control READY；`runtime_state=ready` 只证明 ru
 
 ## Playwright workspace automation — HARD RULE
 
-Playwright/Chrome 的跨 Chat 稳定机械恢复统一由 workspace automation owner 承担：
+Playwright/Chrome 的跨 Chat 正常恢复只有一个 model-facing 入口：
 
 ```text
-/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/
+python3 /Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-ready.py
 ```
 
-Skill 不再维护 `runtime-start/runtime-stop/runtime-status` wrapper，也不临场拼 relay URL、端口、PID 或 MCP transaction。Skill 只负责：先证明恢复动作被允许、获取正确 Browser lease、识别业务目标身份、决定是否需要 RECOVER；一旦进入恢复，机械步骤交给 automation。
-
-正常恢复入口：
+它机械完成：
 
 ```text
-python3 /Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-recover.py
+canonical control probe
+→ bounded Playwright runtime recovery when required
+→ canonical controlled-group ensure
+→ READY | UNKNOWN
 ```
 
-该入口是 bounded state machine：先执行一次 canonical `browser_tabs(list)` handshake；若失败，读取 canonical runtime 状态；DOWN 时只 `start` 一次，READY 但 control 失败时只 `stop → start` 一次；然后再连接一次。整个调用最多一次 lifecycle intervention，仍失败即 fail closed，重新识别 first divergence，不追加第二 transport。
+公开调用自己持有 Browser run boundary + exclusive lease；项目级 automation 在已经持有边界时使用其内部组合接口，禁止模型手工嵌套 lease。
 
-连接恢复后，如果原业务 Tab 不在当前受控组，只允许对**已存在且 durable identity 唯一**的原 Tab 执行：
+`playwright-recover.py`、`playwright-connect-once.py` 与 `tools/browser/playwright-controlled-group.py` 是底层 owner/诊断原子能力，不是正常模型编排面。项目若还需要把业务 tab 纳入工作集，必须调用项目自己的 canonical action（例如 ProFlow 的 `monitor-browser-step.mjs`），而不是模型直接拼 `ensure/adopt/create`。
 
-```text
-python3 /Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-rebind-existing-tab.py --target-tab-id <owner-tab-id>
-```
+通用 Browser owner 仍保证：只有一个 controlled group；durable identity 歧义 fail closed；新物理 carrier 固定 `about:blank → group → readback → navigation`；绝不因为 reconnect 复制业务资源。
 
-也可使用 exact URL / Chat ID 等 durable selector；歧义时 automation 必须 fail closed。`playwright-connect-once.py` 是同一 automation owner 下的低层原子动作，通常只由 recovery 或诊断调用，不是新的 Skill runtime owner。
+旧 Welcome 页面可以残留，也可能显示历史 `connected`；它不是 current control authority。不要刷新/修补旧 relay，不要手改 `mcpRelayUrl`，不要硬编码 relay port/UUID，不要新建第二 controller/window/business tab，也不要仅凭 runtime READY 宣称 Browser control READY。
 
-旧 Welcome 页面可以残留，也可能继续显示历史 `connected`；它不是当前 control authority。不要刷新/修补旧 relay，不要手改 `mcpRelayUrl`，不要硬编码 relay port/UUID，不要新建第二 controller/window/business tab，也不要仅凭 runtime READY 宣称 Browser control READY。真实恢复完成仍要求 canonical Browser tool 能返回，并在合同需要时证明目标业务页可读。
-
-如果 workspace recovery 仍失败，停止自动恢复并重新识别 first divergence。只有当前 native UI 明确证明存在 automation 无法安全操作的人机 debugger/consent 阻塞时，才请求用户执行那个单一不可替代动作。
+`playwright-ready.py` 返回 UNKNOWN 后停止自动恢复并重新识别 first divergence；不要再追加第二 transport。只有 native UI 明确证明存在 automation 无法安全完成的人机 debugger/consent 阻塞时，才请求用户执行那个单一不可替代动作。
 
 ## Credential
 

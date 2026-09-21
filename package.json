@@ -9,7 +9,7 @@
     "@tomflow/proflow-chrome-runtime": "0.1.15",
     "@tomflow/proflow-deployment-conformance": "0.1.13",
     "@tomflow/proflow-dev-tunnel": "0.1.36",
-    "@tomflow/proflow-execution-browser-extension": "0.1.67",
+    "@tomflow/proflow-execution-browser-extension": "0.1.68",
     "@tomflow/proflow-execution-contracts": "0.1.11",
     "@tomflow/proflow-execution-local": "0.1.16",
     "@tomflow/proflow-execution-runtime": "0.1.19",

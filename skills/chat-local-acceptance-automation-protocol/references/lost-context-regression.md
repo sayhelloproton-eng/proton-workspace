@@ -22,7 +22,7 @@ Expected: `LISTEN + RECOVER`; consume partial evidence first. Do not erase it wi
 
 ## R5 — Playwright relay page error
 Scenario: `connect.html` visibly shows WebSocket/MCP relay failure.
-Expected: `SEE → CONNECT → RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`; after the required Browser lease, use `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-recover.py`, then prove target Browser control. No product diagnosis, journey restart, second relay, or improvised transport.
+Expected: `SEE → CONNECT → RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`; use `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-ready.py`. It owns Browser run boundary/lease, bounded recovery and controlled-group readiness. No product diagnosis, second relay, or improvised transport.
 
 ## R6 — CLI launches OAuth/GitHub Browser Auth
 Scenario: an interactive CLI has determined auth is required and opened an ordinary Browser auth page.
@@ -50,11 +50,11 @@ Expected: `SAME_SCENE` at C or `FAST_REPLAY` only affected downstream behavior. 
 
 ## R12 — controlled context was lost, product identity was not
 Scenario: Browser/tool reconnect loses controlled group but original business tabs/resources still exist.
-Expected: `CONNECT + RECOVER + IDENTIFY`; recover the original tab through `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-rebind-existing-tab.py` with a durable selector and prove readability. Ambiguous identity must fail closed; do not duplicate product tabs/resources.
+Expected: `CONNECT + RECOVER + IDENTIFY`; call `playwright-ready.py`, then let the owning project action identify/adopt the durable target. The model must not compose group primitives. Ambiguous identity fails closed; do not duplicate product resources.
 
 ## R13 — automation knowledge exists only in a legacy project runbook
 Scenario: current product facts identify goal/checkpoint, but required recovery/do-not-repeat semantics exist only in a project-local legacy automation document and are absent from the shared Skill.
-Expected: `failureClass=CONTEXT_KNOWLEDGE_MIGRATION_GAP`; do not activate the legacy document as a second automation truth. Migrate `EXECUTION_ENTRY / CANONICAL_ASSET / AUTHORITY_SOURCE / RECOVERY_PATH / DO_NOT_REPEAT` automation semantics into a narrow Skill-owned reference before claiming lost-context PASS.
+Expected: `failureClass=CONTEXT_KNOWLEDGE_MIGRATION_GAP`; do not activate the legacy document as a second truth. Migrate only the narrow automation semantics into the shared Skill/reference first.
 
 ## R14 — proven checkpoint must be saved before advancing
 Scenario: step B now has user-visible and owner proof; C has not started.
@@ -70,39 +70,39 @@ Expected: `WAIT + LISTEN + VERIFY`; inspect existing owner/process progress firs
 
 ## R17 — one Browser action primitive fails while control remains healthy
 Scenario: intended tab remains readable but click/actionability times out.
-Expected: capabilities remain `ACT + SEE/VERIFY`; when locator/automation primitive is the failure, use `failureClass=HARNESS_FAILURE`. Do not mix the dimensions into `ACT/HARNESS`, and do not switch to `CONNECT` while read authority is healthy.
+Expected: capabilities remain `ACT + SEE/VERIFY`; when locator/automation primitive is the failure, use `failureClass=HARNESS_FAILURE`. Do not switch to CONNECT while read authority is healthy.
 
 ## R18 — Microsoft Dev Tunnel auth status is expired
-Scenario: the product-owned managed Dev Tunnel CLI reports `AUTH_EXPIRED` or `NOT_LOGGED_IN`.
-Expected: `AUTHENTICATE + RECOVER`; use the product-owned resolver semantics `user login --github --use-browser-auth`, complete same Browser auth transaction, then require `user show --json = LOGGED_IN`. No guessed PATH binary or second workflow.
+Scenario: the managed Dev Tunnel CLI reports `AUTH_EXPIRED` or `NOT_LOGGED_IN`.
+Expected: `AUTHENTICATE + RECOVER`; use the canonical Dev Tunnel owner, complete the same Browser auth transaction, then require owner readback = LOGGED_IN. No guessed PATH binary or second workflow.
 
 ## R19 — competing Browser automation owners
 Scenario: two automation clients request the same real Chrome Profile/Playwright Extension.
-Expected: `CONNECT + IDENTIFY + RECOVER`; establish one canonical Browser owner, leave competing request unapproved/disconnected, prove intended control. Do not approve both or treat tool-control loss as product loss.
+Expected: `CONNECT + IDENTIFY + RECOVER`; establish one canonical Browser owner, leave the competing request disconnected, prove intended control. Do not approve both or treat tool-control loss as product loss.
 
 ## R20 — runtime READY but Browser control is not READY
 Scenario: managed Playwright runtime is healthy but repeated Browser control cannot read intended context.
-Expected: `CONNECT + RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`; after the required Browser lease, use the workspace `automation/gptweb-mcp/playwright-recover.py` bounded recovery entry. No product journey restart, Skill-owned runtime wrapper, or product defect classification.
+Expected: `CONNECT + RECOVER`, `failureClass=TOOL_RUNTIME_FAILURE`; use `automation/gptweb-mcp/playwright-ready.py`. It owns Browser boundary/lease, bounded runtime recovery and controlled-group readiness. No low-level recovery choreography, product journey restart, or product defect classification.
 
 ## R21 — mutating request timed out after dispatch
 Scenario: a non-idempotent mutation may have reached its owner, but response was lost and a durable postcondition can be queried.
-Expected: `RECOVER + VERIFY`; read that postcondition and set `sideEffectState=APPLIED | NOT_APPLIED | UNKNOWN`. Retry only after `NOT_APPLIED` is proven and allowed. A failed command is not proof of no effect.
+Expected: `RECOVER + VERIFY`; read that postcondition and set `sideEffectState=APPLIED | NOT_APPLIED | UNKNOWN`. Retry only after NOT_APPLIED is proven and allowed.
 
 ## R22 — observation would change the tested page
-Scenario: current page can be inspected, but scrolling/focusing/revealing a control would alter business/UI state merely to make inspection easier.
-Expected: keep `SEE` read-only. If state-changing interaction is actually required, declare an explicit `ACT` with identity and verification. Do not mutate the page under the label of observation.
+Scenario: scrolling/focusing/revealing would alter business/UI state merely to inspect.
+Expected: keep `SEE` read-only. If state-changing interaction is required, declare explicit `ACT` with identity and verification.
 
 ## R23 — project automation rule conflicts with the shared Skill
-Scenario: a legacy project document says to restart Chrome or rerun a journey after Browser timeout, while the shared Skill requires authority recovery and SAME_SCENE.
-Expected: use this Skill as the sole automation truth and ignore/migrate the conflicting project automation rule. The project's Formal Spec/current product facts still decide product semantics; they do not override the shared automation protocol.
+Scenario: legacy project docs conflict with current shared Acceptance rules.
+Expected: shared Skill wins for automation semantics; project Formal Spec/current facts still decide product semantics. Ignore/migrate the legacy automation rule.
 
 ## R24 — shared MCP owner already exists before product discovery
-Scenario: canonical `gptweb-mcp`/runtime authority reports `local-dev` or `playwright-chrome` already managed and READY, while the product acceptance path proposes `npx`/`npm exec` of the same Desktop Commander or Playwright Extension MCP to perform discovery.
-Expected: `CONNECT + IDENTIFY + VERIFY`; prove the existing owner first and keep `sideEffectState=NOT_APPLIED` for the proposed duplicate spawn. Reuse only a manager-owned supported connection surface. Do not start a second raw stdio server/controller, do not attach another client to an existing child's stdin/stdout, and do not restart/steal the existing owner. If the product implementation hard-codes duplicate ownership, stop at FIRST_DIVERGENCE and route to engineering as `PRODUCT_DEFECT` when it violates the intended ownership contract, or `SPEC_EXTERNAL_MISMATCH` when the formal contract itself demands an incompatible ownership model.
+Scenario: canonical runtime already manages local-dev or playwright-chrome while a product path proposes a second raw server/controller.
+Expected: `CONNECT + IDENTIFY + VERIFY`; preserve the existing owner and keep duplicate-spawn sideEffectState=NOT_APPLIED. Never start/attach/restart a competing owner.
 
 ## R25 — Playwright runtime/replay scene survived but control did not
-Scenario: Chrome/business tabs/old Welcome pages survive while current Browser control is missing, stale, or the upstream died. Old Welcome may still display historical `connected` even though it is no longer authority.
-Expected: `CONNECT + RECOVER + IDENTIFY`, `failureClass=TOOL_RUNTIME_FAILURE`. Acquire the required Browser lease, then use only `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/playwright-recover.py`; it owns the bounded connect/start-or-restart/connect sequence. If the original business tab is outside the new controlled group, use the workspace `playwright-rebind-existing-tab.py` with a durable selector. Do not edit/reuse old relay URLs, hard-code port/UUID, create a second controller/window/business tab, restart Chrome merely because relay identity changed, or select an ambiguous duplicate target.
+Scenario: Chrome/business tabs/old Welcome pages survive while current Browser control is missing/stale.
+Expected: `CONNECT + RECOVER + IDENTIFY`; use only `playwright-ready.py`, then delegate durable business-tab reconciliation to the owning project action. Do not call low-level group primitives, edit old relay URLs, create a second controller/window/business tab, or select ambiguous targets.
 
 ## Pass criteria
 
@@ -116,10 +116,10 @@ Failure to use current visible reality when it decides the next step is `DID_NOT
 - `B2 = R5` — relay error → CONNECT / TOOL_RUNTIME_FAILURE.
 - `B3 = R10` — harness failure must not become product failure.
 - `B4 = R11` — SAME_SCENE/FAST_REPLAY instead of Full Fresh.
-- `B5 = R12 + R19 + R20 + R25` — Browser ownership/recovery through workspace automation without duplicate product state or stale-relay reuse.
+- `B5 = R12 + R19 + R20 + R25` — Browser ownership/recovery through workspace automation without duplicate product state.
 - `B6 = R18` — same-transaction Browser-mediated authentication.
 - `B7 = R21` — side-effect reconciliation before retry.
 - `B8 = R23` — shared Skill wins over conflicting project automation instructions.
-- `B9 = R24` — shared MCP owner first; no duplicate raw stdio server/controller.
+- `B9 = R24` — shared MCP owner first; no duplicate raw server/controller.
 
-Use the harness contract in `validation-baseline.md`. The R-series is the full static contract corpus. B1-B9 is representative model-behavior smoke; normal Skill edits run only the affected B cases unless a full release-quality behavioral smoke is explicitly needed.
+Use the harness contract in `validation-baseline.md`. The R-series is the static contract corpus; B1-B9 is representative model-behavior smoke.

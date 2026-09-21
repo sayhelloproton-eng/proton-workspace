@@ -1,21 +1,399 @@
+#!/usr/bin/env node
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
-import { createServer } from "node:http";
-import { mkdtempSync,mkdirSync,readFileSync,realpathSync,readdirSync,rmSync,writeFileSync } from "node:fs";
-import { homedir,tmpdir } from "node:os";
-import { join,resolve } from "node:path";
+import {
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  readdirSync,
+} from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-const CONTRACT="proflow.browser-extension.self-reload.v1", ID="eehdadpmjffomabiedcjijiakconalab", ROOT="/Users/agent/Desktop/proton-workspace";
-const arg=(n,f)=>{const i=process.argv.indexOf(n);return i>=0&&process.argv[i+1]?process.argv[i+1]:f};
-const real=p=>{try{return realpathSync(p)}catch{return resolve(p)}};
-const callbackPath=nonce=>`/proflow-extension/${nonce}`;
-function registration(chrome,id,load){const out=[];for(const e of readdirSync(chrome,{withFileTypes:true})){if(!e.isDirectory())continue;try{const j=JSON.parse(readFileSync(join(chrome,e.name,"Secure Preferences"),"utf8"));const r=j?.extensions?.settings?.[id];if(r&&typeof r.path==="string"&&real(r.path)===real(load))out.push({profile:e.name,path:r.path})}catch{}}if(out.length!==1)throw new Error(out.length?"BROWSER_EXTENSION_REGISTRATION_NOT_UNIQUE":"BROWSER_EXTENSION_REGISTRATION_NOT_FOUND");return out[0]}
-function url(id,action,callback,nonce){const u=new URL(`chrome-extension://${id}/extension/options.html`);for(const [k,v] of Object.entries({proflowAutomation:action,extensionId:id,callback,nonce}))u.searchParams.set(k,v);return u.href}
-function report(v,a,id){if(!v||v.contract!==CONTRACT||v.action!==a||v.extensionId!==id||!v.version)throw new Error("AUTOMATION_REPORT_INVALID");return v}
-function shouldReload(current,expected,force){return force||current!==expected}
-async function server(id){const wait=new Map(),s=createServer((req,res)=>{const w=wait.get(req.url||"");if(!w||req.method!=="POST"){res.statusCode=404;res.end();return}let b="";req.on("data",c=>b+=c);req.on("end",()=>{try{w.resolve(report(JSON.parse(b),w.action,id));wait.delete(req.url);res.statusCode=204;res.end()}catch(e){res.statusCode=400;res.end();w.reject(e)}})});await new Promise((ok,no)=>{s.once("error",no);s.listen(0,"127.0.0.1",ok)});const port=s.address().port;return {s,ask(action,ms){const nonce=randomUUID(),p=callbackPath(nonce),callback=`http://127.0.0.1:${port}${p}`;return {nonce,callback,promise:new Promise((resolve,reject)=>{const t=setTimeout(()=>{wait.delete(p);reject(new Error(`AUTOMATION_CALLBACK_TIMEOUT:${action}`))},ms);wait.set(p,{action,resolve:v=>{clearTimeout(t);resolve(v)},reject})})}}}}
-function open(href){const r=spawnSync("/usr/bin/open",["-g","-a","Google Chrome",href],{encoding:"utf8"});if(r.status!==0)throw new Error("CHROME_OPEN_FAILED")}
-async function collect(s,id,action,ms){const p=s.ask(action,ms);open(url(id,action,p.callback,p.nonce));return await p.promise}
-async function self(){const t=mkdtempSync(join(tmpdir(),"proflow-reload-"));try{const load=join(t,"w",".proflow","deployment","browser-extension","execution-browser-extension"),chrome=join(t,"Chrome");mkdirSync(load,{recursive:true});mkdirSync(join(chrome,"Default"),{recursive:true});writeFileSync(join(chrome,"Default","Secure Preferences"),JSON.stringify({extensions:{settings:{[ID]:{path:load}}}}));assert.equal(registration(chrome,ID,load).profile,"Default");assert.equal(callbackPath("abc-def"),"/proflow-extension/abc-def");assert.match(url(ID,"probe","http://127.0.0.1/x","n"),/^chrome-extension:\/\//);assert.equal(shouldReload("0.1.64","0.1.64",false),false);assert.equal(shouldReload("0.1.64","0.1.64",true),true);assert.equal(shouldReload("0.1.63","0.1.64",false),true);console.log("BROWSER_SELF_RELOAD_SELF_TEST=PASS")}finally{rmSync(t,{recursive:true,force:true})}}
-async function main(){if(process.argv.includes("--self-test"))return self();const force=process.argv.includes("--force"),workspace=arg("--workspace",ROOT),id=arg("--extension-id",ID),ms=Number(arg("--timeout-ms","8000")),load=join(workspace,".proflow","deployment","browser-extension","execution-browser-extension"),expected=String(JSON.parse(readFileSync(join(load,"manifest.json"),"utf8")).version||"");if(!expected)throw new Error("WORKSPACE_EXTENSION_VERSION_MISSING");registration(join(homedir(),"Library","Application Support","Google","Chrome"),id,load);const cb=await server(id);try{let v=await collect(cb,id,"probe",ms);if(!shouldReload(v.version,expected,force)){console.log("BROWSER_SELF_RELOAD=PASS ALREADY_CURRENT");return}await collect(cb,id,"reload",ms);for(let i=0;i<3;i++){await new Promise(r=>setTimeout(r,i?700:900));v=await collect(cb,id,"probe",ms);if(v.version===expected){console.log(`BROWSER_SELF_RELOAD=PASS ${force?"RELOADED_FORCED":"RELOADED"}`);return}}throw new Error(`BROWSER_SELF_RELOAD_VERSION_MISMATCH:${v.version}->${expected}`)}finally{await new Promise(r=>cb.s.close(r))}}
-main().catch(e=>{console.error(`BROWSER_SELF_RELOAD=FAIL ${e instanceof Error?e.message:String(e)}`);process.exit(1)});
+import { inspectBrowserExtensionArtifact } from "./lib/artifact-guard.mjs";
+
+const CONTRACT = "proflow.browser-extension.detail-reload.v1";
+const ID = "eehdadpmjffomabiedcjijiakconalab";
+const DETAIL_URL = `chrome://extensions/?id=${ID}`;
+const DETAIL_TITLE_SUFFIX = "ProFlow Execution Browser";
+const ROOT = "/Users/agent/Desktop/proton-workspace";
+const GROUP = join(ROOT, "tools/browser/playwright-controlled-group.py");
+const NATIVE = fileURLToPath(new URL("./reload-native.swift", import.meta.url));
+
+const arg = (name, fallback) => {
+  const index = process.argv.indexOf(name);
+  return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
+};
+
+const real = (path) => {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
+  }
+};
+
+const normalize = (value) => {
+  try {
+    return new URL(value).href;
+  } catch {
+    return null;
+  }
+};
+
+function registration(chrome, load) {
+  const matches = [];
+  for (const entry of readdirSync(chrome, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    try {
+      const json = JSON.parse(
+        readFileSync(join(chrome, entry.name, "Secure Preferences"), "utf8"),
+      );
+      const registered = json?.extensions?.settings?.[ID];
+      if (
+        registered &&
+        typeof registered.path === "string" &&
+        real(registered.path) === real(load)
+      )
+        matches.push({ profile: entry.name, path: registered.path });
+    } catch {}
+  }
+  if (matches.length !== 1)
+    throw new Error(
+      matches.length
+        ? "BROWSER_EXTENSION_REGISTRATION_NOT_UNIQUE"
+        : "BROWSER_EXTENSION_REGISTRATION_NOT_FOUND",
+    );
+  return matches[0];
+}
+
+function subprocess(command, args, { timeout = 30_000, input } = {}) {
+  const result = spawnSync(command, args, {
+    cwd: ROOT,
+    encoding: "utf8",
+    timeout,
+    input,
+    env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
+  });
+  if (result.error) throw result.error;
+  return result;
+}
+
+function groupAction(args, timeoutMs = 25_000) {
+  const result = subprocess("python3", [GROUP, ...args], { timeout: timeoutMs });
+  if (result.status !== 0)
+    throw new Error(
+      result.stderr.trim().split(/\r?\n/).at(-1) ||
+        "CONTROLLED_GROUP_ACTION_FAILED",
+    );
+  const value = JSON.parse(result.stdout.trim());
+  if (
+    value?.contract !== "workspace.playwright-controlled-group.v1" ||
+    !value?.result
+  )
+    throw new Error("CONTROLLED_GROUP_RESULT_INVALID");
+  return value.result;
+}
+
+function closeDetailTab(tabId) {
+  try {
+    const closed = groupAction(
+      [
+        "close",
+        "--target-tab-id",
+        String(tabId),
+        "--exact-url",
+        DETAIL_URL,
+      ],
+      15_000,
+    );
+    return closed.status === "CLOSED" ? "PASS" : "UNKNOWN";
+  } catch {
+    return "UNKNOWN";
+  }
+}
+
+function freshDetailTab() {
+  const current = groupAction(["list"]);
+  const existing = (current.tabs ?? []).filter(
+    (tab) => normalize(tab.url) === normalize(DETAIL_URL),
+  );
+  let reconciledDetailTabs = 0;
+  for (const tab of existing) {
+    if (!Number.isInteger(tab?.tabId))
+      throw new Error("EXTENSION_DETAIL_PAGE_TAB_INVALID");
+    if (closeDetailTab(tab.tabId) !== "PASS")
+      throw new Error("EXTENSION_DETAIL_PAGE_RECONCILE_UNKNOWN");
+    reconciledDetailTabs += 1;
+  }
+
+  const opened = groupAction(["create", "--url", DETAIL_URL], 35_000);
+  if (opened.status !== "READY" || !Number.isInteger(opened.tabId))
+    throw new Error("EXTENSION_DETAIL_PAGE_NOT_READY");
+  if (normalize(opened.url) !== normalize(DETAIL_URL))
+    throw new Error("EXTENSION_DETAIL_PAGE_URL_MISMATCH");
+  return { tabId: opened.tabId, reconciledDetailTabs };
+}
+
+function activateDetailTab(tabId) {
+  const script = `
+set previousBundle to ""
+try
+  tell application "System Events"
+    set frontProcess to first application process whose frontmost is true
+    set previousBundle to bundle identifier of frontProcess as text
+  end tell
+end try
+
+tell application "Google Chrome"
+  set targetCount to 0
+  set targetWindowId to ""
+  set previousTabId to ""
+  set bx1 to 0
+  set by1 to 0
+  set bx2 to 0
+  set by2 to 0
+
+  repeat with w in windows
+    set tabCount to count of tabs of w
+    repeat with i from 1 to tabCount
+      set t to tab i of w
+      if (id of t as text) is "${tabId}" then
+        if (URL of t as text) is not "${DETAIL_URL}" then error "EXTENSION_DETAIL_APPLESCRIPT_URL_MISMATCH"
+        set targetCount to targetCount + 1
+        set targetWindowId to id of w as text
+        set previousTabId to id of active tab of w as text
+        set b to bounds of w
+        set bx1 to item 1 of b
+        set by1 to item 2 of b
+        set bx2 to item 3 of b
+        set by2 to item 4 of b
+        set active tab index of w to i
+        set index of w to 1
+      end if
+    end repeat
+  end repeat
+
+  if targetCount is not 1 then error "EXTENSION_DETAIL_APPLESCRIPT_TARGET_COUNT:" & targetCount
+  activate
+  delay 0.25
+
+  set verified to false
+  set activeTitle to ""
+  set activeUrl to ""
+  repeat with w in windows
+    if (id of w as text) is targetWindowId then
+      if (id of active tab of w as text) is not "${tabId}" then error "EXTENSION_DETAIL_APPLESCRIPT_ACTIVE_TAB_MISMATCH"
+      set activeUrl to URL of active tab of w as text
+      if activeUrl is not "${DETAIL_URL}" then error "EXTENSION_DETAIL_APPLESCRIPT_ACTIVE_URL_MISMATCH"
+      set activeTitle to title of active tab of w as text
+      set verified to true
+    end if
+  end repeat
+  if verified is not true then error "EXTENSION_DETAIL_APPLESCRIPT_WINDOW_MISSING"
+end tell
+
+tell application "System Events"
+  if frontmost of process "Google Chrome" is not true then error "EXTENSION_DETAIL_CHROME_NOT_FRONTMOST"
+end tell
+
+return previousBundle & "|||" & targetWindowId & "|||" & previousTabId & "|||" & (bx1 as text) & "|||" & (by1 as text) & "|||" & (bx2 as text) & "|||" & (by2 as text) & "|||" & activeTitle & "|||" & activeUrl
+`;
+  const result = subprocess("/usr/bin/osascript", ["-e", script], {
+    timeout: 10_000,
+  });
+  if (result.status !== 0)
+    throw new Error(
+      result.stderr.trim().split(/\r?\n/).at(-1) ||
+        "EXTENSION_DETAIL_APPLESCRIPT_ACTIVATE_FAILED",
+    );
+  const parts = result.stdout.trim().split("|||");
+  if (parts.length !== 9)
+    throw new Error("EXTENSION_DETAIL_APPLESCRIPT_RESULT_INVALID");
+  const [previousBundle, windowId, previousTabId, x1, y1, x2, y2, title, url] =
+    parts;
+  if (normalize(url) !== normalize(DETAIL_URL))
+    throw new Error("EXTENSION_DETAIL_APPLESCRIPT_URL_READBACK_MISMATCH");
+  if (!title.includes(DETAIL_TITLE_SUFFIX))
+    throw new Error("EXTENSION_DETAIL_APPLESCRIPT_TITLE_MISMATCH");
+  const bounds = [x1, y1, x2, y2].map(Number);
+  if (bounds.some((value) => !Number.isFinite(value)))
+    throw new Error("EXTENSION_DETAIL_APPLESCRIPT_BOUNDS_INVALID");
+  return {
+    previousBundle,
+    windowId,
+    previousTabId,
+    bounds,
+    title,
+    url,
+  };
+}
+
+function restoreForeground(state) {
+  if (!state) return "NOT_NEEDED";
+  const previousBundle = String(state.previousBundle ?? "");
+  const previousWindowId = String(state.windowId ?? "");
+  const previousTabId = String(state.previousTabId ?? "");
+  const script = `
+tell application "Google Chrome"
+  repeat with w in windows
+    if (id of w as text) is "${previousWindowId}" then
+      set tabCount to count of tabs of w
+      repeat with i from 1 to tabCount
+        if (id of tab i of w as text) is "${previousTabId}" then
+          set active tab index of w to i
+        end if
+      end repeat
+    end if
+  end repeat
+end tell
+
+set previousBundle to "${previousBundle}"
+if previousBundle is not "" then
+  try
+    tell application id previousBundle to activate
+  end try
+end if
+return "RESTORED"
+`;
+  const result = subprocess("/usr/bin/osascript", ["-e", script], {
+    timeout: 10_000,
+  });
+  return result.status === 0 ? "PASS" : "UNKNOWN";
+}
+
+function nativeReload(tabId, workspace, timeoutMs) {
+  const runtimeDir = join(workspace, "tools/browser/.runtime/native-eyes");
+  mkdirSync(runtimeDir, { recursive: true });
+  const screenshot = join(runtimeDir, "proflow-extension-reload-current.png");
+  const activation = activateDetailTab(tabId);
+  let restore = "UNKNOWN";
+  try {
+    const capture = subprocess(
+      "/usr/sbin/screencapture",
+      ["-x", "-m", screenshot],
+      { timeout: 10_000 },
+    );
+    if (capture.status !== 0)
+      throw new Error(
+        capture.stderr.trim().split(/\r?\n/).at(-1) ||
+          "EXTENSION_DETAIL_SCREENSHOT_FAILED",
+      );
+
+    const native = subprocess(
+      "/usr/bin/swift",
+      [
+        NATIVE,
+        "--screenshot",
+        screenshot,
+        "--window-bounds",
+        activation.bounds.join(","),
+      ],
+      { timeout: timeoutMs + 20_000 },
+    );
+    if (native.status !== 0)
+      throw new Error(
+        native.stderr.trim().split(/\r?\n/).at(-1) ||
+          "EXTENSION_NATIVE_RELOAD_FAILED",
+      );
+    const value = JSON.parse(native.stdout.trim());
+    if (
+      value?.contract !== "proflow.browser-extension.native-reload.v1" ||
+      value?.status !== "DISPATCHED"
+    )
+      throw new Error("EXTENSION_NATIVE_RELOAD_RESULT_INVALID");
+    return {
+      ...value,
+      screenshot,
+      chromeWindowId: activation.windowId,
+      detailTitle: activation.title,
+    };
+  } finally {
+    restore = restoreForeground(activation);
+    if (restore !== "PASS")
+      console.error("BROWSER_EXTENSION_FOREGROUND_RESTORE=UNKNOWN");
+  }
+}
+
+function selfTest() {
+  assert.equal(ID, "eehdadpmjffomabiedcjijiakconalab");
+  assert.equal(
+    DETAIL_URL,
+    "chrome://extensions/?id=eehdadpmjffomabiedcjijiakconalab",
+  );
+  assert.equal(DETAIL_TITLE_SUFFIX, "ProFlow Execution Browser");
+  assert.equal(normalize(DETAIL_URL), DETAIL_URL);
+  assert.equal(dirname(NATIVE), dirname(fileURLToPath(import.meta.url)));
+  console.log("BROWSER_EXTENSION_DETAIL_RELOAD_SELF_TEST=PASS");
+}
+
+async function main() {
+  if (process.argv.includes("--self-test")) return selfTest();
+  if (process.argv.includes("--extension-id"))
+    throw new Error("BROWSER_EXTENSION_ID_IS_FIXED");
+
+  const workspace = arg("--workspace", ROOT);
+  const timeoutMs = Number(arg("--timeout-ms", "10000"));
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 1000 || timeoutMs > 30000)
+    throw new Error("EXTENSION_RELOAD_TIMEOUT_INVALID");
+
+  const artifact = await inspectBrowserExtensionArtifact({ workspace });
+  if (artifact.status !== "READY") {
+    console.log(
+      JSON.stringify({
+        contract: CONTRACT,
+        status: "BLOCKED",
+        reason: artifact.reason,
+        artifact,
+      }),
+    );
+    process.exitCode = 3;
+    return;
+  }
+
+  const load = join(
+    workspace,
+    ".proflow",
+    "deployment",
+    "browser-extension",
+    "execution-browser-extension",
+  );
+  const expected = String(
+    JSON.parse(readFileSync(join(load, "manifest.json"), "utf8")).version || "",
+  );
+  if (!expected) throw new Error("WORKSPACE_EXTENSION_VERSION_MISSING");
+
+  registration(
+    join(homedir(), "Library", "Application Support", "Google", "Chrome"),
+    load,
+  );
+
+  const { tabId, reconciledDetailTabs } = freshDetailTab();
+  let cleanup = "UNKNOWN";
+  try {
+    const dispatched = nativeReload(tabId, workspace, timeoutMs);
+    console.log(
+      JSON.stringify({
+        contract: CONTRACT,
+        status: "DISPATCHED",
+        extensionId: ID,
+        detailUrl: DETAIL_URL,
+        expectedVersion: expected,
+        tabId,
+        reconciledDetailTabs,
+        native: dispatched,
+      }),
+    );
+  } finally {
+    cleanup = closeDetailTab(tabId);
+    if (cleanup !== "PASS")
+      console.error("BROWSER_EXTENSION_DETAIL_TAB_CLEANUP=UNKNOWN");
+  }
+}
+
+main().catch((error) => {
+  console.error(
+    `BROWSER_EXTENSION_DETAIL_RELOAD=FAIL ${error instanceof Error ? error.message : String(error)}`,
+  );
+  process.exitCode = 1;
+});

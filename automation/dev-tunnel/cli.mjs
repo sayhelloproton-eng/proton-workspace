@@ -121,9 +121,79 @@ async function stopHost(tunnel) {
   return { tunnel, state: 'STOPPED' };
 }
 
+async function portFacts(tunnel) {
+  const raw = parsed(await run(['port', 'list', tunnel, '--json'], REMOTE_QUERY_TIMEOUT_MS));
+  const ports = Array.isArray(raw) ? raw : raw.ports ?? raw.tunnel?.ports ?? (/no ports found/i.test(raw.warning ?? '') ? [] : undefined);
+  if (!Array.isArray(ports)) throw new Error('PORT_LIST_INVALID');
+  return ports;
+}
+
+async function ensureConfiguredTunnel(tunnel, port, publicAccess) {
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT_INVALID');
+  await ensureLogin();
+  let remote = await remoteTunnel(tunnel);
+  let created = false;
+  if (!remote.fact) {
+    if (remote.result.code === null || !/not found|does not exist|could not be found/i.test(remote.result.stderr))
+      throw new Error('TUNNEL_STATE_UNKNOWN');
+    parsed(await run(['create', tunnel, ...(publicAccess ? ['--allow-anonymous'] : []), '--json']));
+    created = true;
+    remote = await remoteTunnel(tunnel);
+    if (!remote.fact) throw new Error('TUNNEL_CREATE_READBACK_UNKNOWN');
+  }
+  const ports = await portFacts(tunnel);
+  const existing = ports.find(item => item.portNumber === port);
+  if (existing && existing.protocol?.toLowerCase() !== 'http') throw new Error('PORT_PROTOCOL_CONFLICT');
+  if (!existing)
+    parsed(await run(['port', 'create', tunnel, '--port-number', String(port), '--protocol', 'http', '--json']));
+  return {
+    tunnel,
+    port,
+    state: 'CONFIGURED',
+    access: created ? (publicAccess ? 'PUBLIC' : 'AUTHENTICATED') : 'PRESERVED',
+  };
+}
+
+async function discoverPublicBaseUrl(tunnel, port) {
+  const ports = await portFacts(tunnel);
+  const existing = ports.find(item => item.portNumber === port);
+  const candidate = existing?.portForwardingUris?.[0] ?? existing?.portUri;
+  if (typeof candidate !== 'string') throw new Error('PUBLIC_URL_NOT_AVAILABLE');
+  const url = new URL(candidate);
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash)
+    throw new Error('PUBLIC_URL_INVALID');
+  return url.origin;
+}
+
+async function readyTunnel(tunnel, port, publicAccess) {
+  const configured = await ensureConfiguredTunnel(tunnel, port, publicAccess);
+  const host = await startHost(tunnel);
+  const publicBaseUrl = await discoverPublicBaseUrl(tunnel, port);
+  let hostConnections = 0;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const remote = await remoteTunnel(tunnel);
+    if (!remote.fact) throw new Error('TUNNEL_READY_READBACK_UNKNOWN');
+    if (typeof remote.fact.hostConnections !== 'number') throw new Error('HOST_STATE_UNKNOWN');
+    hostConnections = remote.fact.hostConnections;
+    if (hostConnections > 0) break;
+    await sleep(250);
+  }
+  if (hostConnections < 1) throw new Error('TUNNEL_HOST_READBACK_NOT_READY');
+  return {
+    contract: 'workspace.dev-tunnel-ready.v1',
+    status: 'READY',
+    tunnel,
+    port,
+    publicBaseUrl,
+    configured,
+    host,
+    hostConnections,
+  };
+}
+
 try {
   if (operation === 'help') {
-    output({ commands: ['resolve', 'auth [--login]', 'ensure ID PORT [--public]', 'start ID', 'host ID', 'status ID', 'stop ID', 'recover ID', 'resource METHOD JSON', 'cli <native arguments>'], owner: 'workspace Microsoft Dev Tunnel; products retain service topology and ingress policy' });
+    output({ commands: ['resolve', 'auth [--login]', 'ensure ID PORT [--public]', 'ready ID PORT [--public]', 'start ID', 'host ID', 'status ID', 'stop ID', 'recover ID', 'resource METHOD JSON', 'cli <native arguments>'], owner: 'workspace Microsoft Dev Tunnel; products retain service topology and ingress policy' });
   } else if (operation === 'resolve') output(resolved);
   else if (operation === 'auth') {
     let state = await auth();
@@ -169,20 +239,10 @@ try {
     }
   } else if (operation === 'ensure') {
     const tunnel = id(args[0]), port = Number(args[1]);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT_INVALID');
-    await ensureLogin();
-    const remote = await remoteTunnel(tunnel);
-    if (!remote.fact) {
-      if (remote.result.code === null || !/not found|does not exist|could not be found/i.test(remote.result.stderr)) throw new Error('TUNNEL_STATE_UNKNOWN');
-      parsed(await run(['create', tunnel, ...(args.includes('--public') ? ['--allow-anonymous'] : []), '--json']));
-    }
-    const raw = parsed(await run(['port', 'list', tunnel, '--json'], REMOTE_QUERY_TIMEOUT_MS));
-    const ports = Array.isArray(raw) ? raw : raw.ports ?? raw.tunnel?.ports ?? (/no ports found/i.test(raw.warning ?? '') ? [] : undefined);
-    if (!Array.isArray(ports)) throw new Error('PORT_LIST_INVALID');
-    const existing = ports.find(item => item.portNumber === port);
-    if (existing && existing.protocol?.toLowerCase() !== 'http') throw new Error('PORT_PROTOCOL_CONFLICT');
-    if (!existing) parsed(await run(['port', 'create', tunnel, '--port-number', String(port), '--protocol', 'http', '--json']));
-    output({ tunnel, port, state: 'CONFIGURED', access: remote.fact ? 'PRESERVED' : args.includes('--public') ? 'PUBLIC' : 'AUTHENTICATED' });
+    output(await ensureConfiguredTunnel(tunnel, port, args.includes('--public')));
+  } else if (operation === 'ready') {
+    const tunnel = id(args[0]), port = Number(args[1]);
+    output(await readyTunnel(tunnel, port, args.includes('--public')));
   } else {
     const tunnel = id(args[0]);
     if (operation === 'status') {

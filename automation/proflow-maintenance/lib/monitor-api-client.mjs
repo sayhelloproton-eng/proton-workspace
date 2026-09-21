@@ -80,21 +80,32 @@ async function credential(path) {
   return value;
 }
 
+async function moduleFacts(root, moduleRef) {
+  const path = join(root, `.proflow/runtime/modules/${moduleRef}/shared-facts.json`);
+  const shared = JSON.parse(await readFile(path, "utf8"));
+  if (
+    shared?.contract !== "proflow.module-shared-facts.v1" ||
+    shared?.moduleRef !== moduleRef ||
+    !shared?.facts ||
+    typeof shared.facts !== "object" ||
+    Array.isArray(shared.facts)
+  ) throw new Error("SHARED_FACTS_INVALID");
+  return shared.facts;
+}
+
 export async function createMonitorApiClient({
   workspace = DEFAULT_WORKSPACE,
   timeoutMs = 5_000,
 } = {}) {
   const root = resolve(workspace);
-  const sharedFactsPath = join(
-    root,
-    ".proflow/runtime/modules/execution-browser-extension/shared-facts.json",
-  );
-  const shared = JSON.parse(await readFile(sharedFactsPath, "utf8"));
-  const facts = shared?.facts;
-  if (!facts || typeof facts !== "object") throw new Error("SHARED_FACTS_INVALID");
+  const facts = await moduleFacts(root, "execution-browser-extension");
 
   const base = endpoint(factString(facts, "monitorControlEndpoint"));
   const token = await credential(factString(facts, "monitorControlTokenFile"));
+  const monitorStatePath =
+    typeof facts.monitorStatePath === "string" && facts.monitorStatePath.length > 0
+      ? resolve(facts.monitorStatePath)
+      : null;
 
   async function invoke(operation, input = {}) {
     let response;
@@ -127,7 +138,56 @@ export async function createMonitorApiClient({
     return body.value;
   }
 
-  return Object.freeze({ workspace: root, endpoint: base, invoke });
+  return Object.freeze({
+    workspace: root,
+    endpoint: base,
+    monitorStatePath,
+    invoke,
+  });
+}
+
+export async function createMonitorApplicationClient({
+  workspace = DEFAULT_WORKSPACE,
+  timeoutMs = 125_000,
+} = {}) {
+  const root = resolve(workspace);
+  const facts = await moduleFacts(root, "platform-host");
+  const base = endpoint(factString(facts, "endpoint"));
+  const token = await credential(factString(facts, "taskApplicationTokenFile"));
+
+  return Object.freeze({
+    workspace: root,
+    endpoint: base,
+    async drive() {
+      let response;
+      try {
+        response = await fetch(`${base}/application/monitor`, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ operation: "drive", input: {} }),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch {
+        throw new Error("MONITOR_APPLICATION_TRANSPORT_UNKNOWN");
+      }
+      let body;
+      try {
+        body = await response.json();
+      } catch {
+        throw new Error("MONITOR_APPLICATION_BODY_INVALID");
+      }
+      if (!response.ok)
+        throw new Error(
+          typeof body?.error === "string" && body.error.length
+            ? body.error
+            : `MONITOR_APPLICATION_HTTP_${response.status}`,
+        );
+      return body;
+    },
+  });
 }
 
 export async function negotiateBootProofContract(client) {
