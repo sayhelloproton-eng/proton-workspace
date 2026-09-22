@@ -131,6 +131,20 @@ High-value defaults:
 
 Detailed metrics/failure families live in `references/metrics-and-antipatterns.md` and `references/execution-policy.yaml`.
 
+## Model-facing release automation — HARD RULE
+
+If a dedicated model-facing release action exists, use it instead of manually composing
+package selection, changeset/version, build, Registry queries, publish or Git mechanics.
+The model supplies release intent and consumes the structured receipt.
+
+npm release/publish must be detached and non-blocking. The launcher returns promptly;
+the worker durably records each stage before slow work. Durable receipt/status is the
+normal model authority. Do not poll PID, shell sessions or logs, or wait in a status loop.
+PID/log inspection is reserved for automation fault diagnosis after a named failure.
+`RUNNING` permits independent gate-safe work or returning control; later read the same
+receipt. `UNKNOWN` requires authority reconciliation and never grants automatic replay.
+Project Skills define the action and adoption routing, not this generic protocol.
+
 ## Long tasks — HARD RULE
 
 For build, install, deploy, publish, Full Suite, or any known-slow task:

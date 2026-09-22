@@ -161,6 +161,30 @@ Normal Monitor work uses these stable actions:
 
 The normal model MUST NOT expand these into `playwright-recover`, group primitives, Dev Tunnel auth/ensure/host, Extension reload, Platform start/status loops, low-level boot/takeover, `handoff.complete`, `bootstrap.stage`, or Chat registration.
 
+## Single-package release — model action
+
+When one ProFlow npm package has completed development and its source is committed:
+
+```bash
+node automation/proflow-maintenance/package-release.mjs release '{"package":"dev-tunnel"}'
+```
+
+Input: one package directory/name, optional `summary`. Maintenance delegates to the sole
+ProFlow owner, `pnpm package:release <package>`. Do not manually reconstruct npm mechanics.
+`RUNNING` returns immediately; continue safe independent work or return control.
+Later read the same durable authority with the receipt's `statusCommand`:
+
+```bash
+node automation/proflow-maintenance/package-release.mjs status '{"package":"dev-tunnel"}'
+```
+
+`PASS` → follow `next=PACKAGE_ADOPTION`; `BLOCKED` → resolve `requiredAction`;
+`UNKNOWN` → reconcile, then explicit retry only; `FAIL` → repair package gate/automation.
+No PID/log polling, synchronous waiting, release-many, or release-all.
+Release multiple packages by separate sequential calls, each reaching a terminal receipt.
+The [Maintenance action catalog](../../automation/proflow-maintenance/README.md#single-package-npm-release-action)
+owns input/output examples; ProFlow owns implementation mechanics.
+
 ## Standing release authorization — HARD RULE
 
 The user has given standing authorization for normal ProFlow package release/publish as part of continuing the engineering mainline. Do not stop to ask for per-release confirmation when the target package/version/release intent is already mechanically determined by the formal release plan and prior gates. A normal `continue / 继续处理` may proceed through version, publish, Registry readback, single-package update, materialization and adoption.

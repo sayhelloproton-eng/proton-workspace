@@ -2,6 +2,36 @@
 
 本目录是 Temporary Chat Loop 的 deterministic workflow owner。业务 truth 始终属于 Node Monitor Service；脚本不直接写 `monitor-state.json`，也不建立第二份 cache truth。
 
+## Single-package npm release action
+
+Intent: 发布一个已完成开发与提交的 ProFlow npm package。
+
+```bash
+node automation/proflow-maintenance/package-release.mjs release '{"package":"dev-tunnel"}'
+node automation/proflow-maintenance/package-release.mjs status '{"package":"dev-tunnel"}'
+# Only after UNKNOWN reconciliation, explicitly retry the same release:
+node automation/proflow-maintenance/package-release.mjs retry '{"package":"dev-tunnel"}'
+```
+
+Input is exactly one `package` (directory name or npm name), plus optional `summary`.
+Do not pass repo paths, versions, Registry URLs, changeset IDs or shell commands.
+The adapter delegates once to canonical `pnpm package:release <package>` in ProFlow.
+ProFlow alone owns changeset/version/build/Registry/publish mechanics.
+
+Output preserves the canonical receipt and adds the Maintenance status/retry commands:
+
+```json
+{"contract":"proflow.package-release.v2","status":"RUNNING","stage":"QUEUED","runId":"...","package":"dev-tunnel","receiptPath":".../receipt.json","next":"PACKAGE_RELEASE_STATUS"}
+```
+
+`RUNNING`: return immediately and continue safe independent work; later invoke status.
+Never poll, sleep, inspect PID/log, or manually orchestrate npm release.
+`PASS`: continue `next=PACKAGE_ADOPTION`. `BLOCKED`: resolve `requiredAction`.
+`UNKNOWN`: restore authority before explicit retry; transport timeout is not proof of failure.
+`FAIL`: repair the named package gate or automation error.
+For multiple packages, call this single-package action sequentially and consume each terminal receipt.
+There is no release-many/release-all action. Tests never publish a real or temporary version.
+
 ## Model-facing public actions
 
 正常 Monitor 模型只记住这些稳定入口：

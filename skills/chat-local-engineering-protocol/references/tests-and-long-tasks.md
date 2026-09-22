@@ -32,7 +32,7 @@ IMPLEMENT
 ```text
 unit / integration tests
 typecheck / lint when used as correctness gate
-build / publishability
+build
 E2E / browser acceptance
 full regression / Full Suite
 ```
@@ -109,27 +109,19 @@ work pool exhausted
 
 ## npm publish / release — absolute non-blocking
 
-npm publish/release 无条件禁止同步等待：
+Use the dedicated model-facing action where available. Supply intent once; the action
+starts a detached worker and promptly returns a durable receipt. The model does not
+compose release commands, track PID/session/log, poll, or synchronously wait.
 
-```text
-start once, detached/durable
-→ record PID/session + log + exact package@version
-→ execute all current eligible mainline work
-→ proactively replan downstream gate-safe work
-→ only after work exhaustion: check exact Registry authority
-→ Registry absent / publish still RUNNING => replan and continue useful work
-→ return only when no further safe relevant work exists
-```
+`RUNNING` → safe independent work or return control → later read the same durable status.
+`PASS` → follow the owner's next action. `BLOCKED` → resolve the named prerequisite.
+`UNKNOWN` → reconcile exact publication authority before explicit retry. `FAIL` → repair
+the named gate/automation failure. Process/log inspection is automation fault diagnosis only.
 
-最终 authority：
-
-```text
-npm view <package>@<version> version
-```
-
-exact version 已存在即 `APPLIED/PASS`，无需再关心原 publish 进程。Registry 尚未满足时，不允许立刻转去盯 PID；先确认当前及后续可做工作已经耗尽，再检查 PID/session。PID 活着判 `RUNNING` 后必须再次规划可独立推进的后续工作并执行；PID 已退出才读日志一次。只有机械证明 `NOT_APPLIED/FAILED` 后才能重试。若发布结果尚未满足且经过再次规划仍没有任何不跨 delivery Gate 的独立工作，才返回控制。
-
-禁止 publish 一个临时版本来调试实现。Publish 只能发生在 Stage Verify / required Acceptance 之后的正式 delivery phase。
+Exact Registry version remains publication authority; a timeout never proves absence.
+Never publish temporary versions to test release automation. Publish occurs only in an
+authorized delivery phase after required gates. Project-specific commands belong to
+project Skills and the release owner, not this shared protocol.
 
 ## Release-bound Git authorization
 

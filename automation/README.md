@@ -53,3 +53,9 @@ ProFlow Monitor real Acceptance preparation
 - `feishu-knowledge-publish/`：飞书知识发布 deterministic workflow。
 
 规则：不复制 `tools/` 原子能力；不把判断/方法论塞进 automation；Skill 只保留策略、权限和验收语义。稳定的跨 owner 顺序、readback、UNKNOWN reconciliation 应下沉为单一 convergence action。
+
+## ProFlow single-package release
+
+`node automation/proflow-maintenance/package-release.mjs release '{"package":"dev-tunnel"}'`
+发布一个已提交的 npm package；RUNNING 立即返回，后续用同入口 `status` 读取 durable receipt，PASS 后 adoption。
+输入、状态和显式 retry 见 [Maintenance action catalog](proflow-maintenance/README.md#single-package-npm-release-action)。
