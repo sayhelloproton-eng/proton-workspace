@@ -35,8 +35,8 @@ CLAIM_SHIFT      → monitor-claim.mjs --authorities-read
 REAL_SCENE       → proflow-real-scene-ready.mjs
 BROWSER          → monitor-browser-step.mjs
 HANDOFF          → monitor-handoff-finalize.mjs
-STAGE_PREPARE    → proflow-stage-prepare.mjs
-STAGE_VERIFY     → proflow-stage-verify.mjs
+OWNER_GATE       → pnpm --dir repos/proflow package:gate <one-package>
+OWNER_BUILD      → pnpm --dir repos/proflow package:build <one-package>
 REAL_ACCEPTANCE  → proflow-monitor-acceptance.mjs
 ```
 
@@ -171,23 +171,23 @@ It consumes official Platform status, Extension adoption, Dev Tunnel ready, form
 
 ## 10. Final gate
 
-Before Stage Freeze:
+ProFlow has no aggregate Stage Prepare / Stage Verify action. Product verification is owned by exactly one package.
 
-```text
-proflow-stage-prepare.mjs --stage monitor-controlled-group
+After implementation is complete and Stage Freeze:
+
+```bash
+pnpm --dir repos/proflow package:gate <one-package>
 ```
 
-This refreshes generated governance only.
+Run build only when the selected owner needs an artifact:
 
-After mechanical review and Stage Freeze:
-
-```text
-proflow-stage-verify.mjs --stage monitor-controlled-group
+```bash
+pnpm --dir repos/proflow package:build <same-package>
 ```
 
-This is verification-only with respect to generated governance. Failure opens one Repair Stage.
+Multiple affected owners require separate model calls. Repository governance is explicit `repo:*` work and is not package test/build evidence.
 
-After formal version/materialization/adoption:
+After the owning package Gate passes and formal version/materialization/adoption is complete:
 
 ```text
 proflow-monitor-acceptance.mjs --mode SAME_SCENE

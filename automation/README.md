@@ -32,11 +32,9 @@ ProFlow Monitor Browser action
 ProFlow Monitor handoff finalization
 → automation/proflow-maintenance/monitor-handoff-finalize.mjs
 
-ProFlow generated gate preparation
-→ automation/proflow-maintenance/proflow-stage-prepare.mjs
-
-ProFlow final Stage Verify
-→ automation/proflow-maintenance/proflow-stage-verify.mjs
+ProFlow single-owner package Gate / Build
+→ pnpm --dir repos/proflow package:gate <one-package>
+→ pnpm --dir repos/proflow package:build <one-package>
 
 ProFlow Monitor real Acceptance preparation
 → automation/proflow-maintenance/proflow-monitor-acceptance.mjs

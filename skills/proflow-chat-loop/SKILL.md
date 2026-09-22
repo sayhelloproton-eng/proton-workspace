@@ -146,13 +146,9 @@ Normal Monitor work uses these stable actions:
    node automation/proflow-maintenance/monitor-handoff-finalize.mjs \
      --input-file <continuation.json>
 
-7. FINAL_GATES
-   node automation/proflow-maintenance/proflow-stage-prepare.mjs \
-     --stage monitor-controlled-group
-   → mechanical generated diff review
-   → STAGE FREEZE
-   node automation/proflow-maintenance/proflow-stage-verify.mjs \
-     --stage monitor-controlled-group
+7. OWNER_GATE
+   → complete implementation and STAGE FREEZE
+   pnpm --dir repos/proflow package:gate <one-package>
    → official version/materialization/adoption
    node automation/proflow-maintenance/proflow-monitor-acceptance.mjs \
      --mode SAME_SCENE
@@ -281,10 +277,8 @@ For a changed implementation:
 
 ```text
 implementation complete
-→ stage-prepare
-→ mechanical generated diff review
 → Stage Freeze
-→ stage-verify
+→ package:gate <one-owner>
 → official version/materialization/adoption
 → REAL_SCENE_READY
 → final Acceptance
@@ -364,23 +358,17 @@ Do not store runtime snapshots, currentChatId/mutationMode, pendingBootstrap, Br
 
 ## Final verification / Acceptance — HARD RULE
 
-Before Stage Freeze:
+ProFlow verifies one owner per action. After Stage Freeze, call:
 
-```text
-node automation/proflow-maintenance/proflow-stage-prepare.mjs \
-  --stage monitor-controlled-group
+```bash
+pnpm --dir repos/proflow package:gate <one-package>
 ```
 
-It refreshes generated test governance only. Review generated diff mechanically, then freeze.
-
-After Stage Freeze:
-
-```text
-node automation/proflow-maintenance/proflow-stage-verify.mjs \
-  --stage monitor-controlled-group
-```
-
-It runs governance check, targeted tests, Extension typecheck/build, workspace self-tests and diff checks. Failure opens one Repair Stage; no test→patch→test loop.
+Build, only when required, is also one package: `pnpm --dir repos/proflow package:build <one-package>`.
+Multiple affected owners require separate model calls. Tools own adjacent tests; do not
+aggregate package and workspace tool tests into a stage action. Explicit `repo:*`
+governance checks structure/surfaces and never counts as package test evidence.
+No generated central test inventory is prepared. Historical captures are not current gates.
 
 After Stage Verify PASS and formal version/materialization/adoption:
 
@@ -399,9 +387,8 @@ context-manifest → model reads authorities
 → real-scene-ready
 → observe CURRENT reality
 → Engineering decision / implementation
-→ stage-prepare
 → Stage Freeze
-→ stage-verify
+→ package:gate <one-owner>
 → official artifact adoption
 → monitor-acceptance → one visual EYES
 → checkpoint / handoff-finalize

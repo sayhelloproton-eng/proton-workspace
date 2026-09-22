@@ -61,34 +61,23 @@ node automation/proflow-maintenance/monitor-handoff-finalize.mjs \
 
 模型仍负责 authority 理解、工程/产品语义判断、continuation/blocker/notification 语义。模型不再负责首班 bootstrap/create、boot/takeover 串联、Browser reconnect/group、Tunnel lifecycle、Extension reload/adoption、Platform start/status 编排、handoff complete/bootstrap/create。
 
-## Final gate actions
+## Owner gate actions
 
-实现阶段最后一个**允许修改 generated artifact** 的动作：
+ProFlow product verification belongs to exactly one package:
 
-```text
-node automation/proflow-maintenance/proflow-stage-prepare.mjs \
-  --stage monitor-controlled-group
+```bash
+pnpm --dir repos/proflow package:gate <one-package>
+pnpm --dir repos/proflow package:build <one-package>
 ```
 
-它只执行 generated test-governance refresh，不运行 tests/typecheck/build/Acceptance。机械检查 generated diff 后进入 Stage Freeze。
+Call the gate after Stage Freeze, and build only when needed. Separate affected owners
+require separate model calls. Tool/action tests stay with their owning tool; there is no
+stage aggregator mixing package tests with workspace helper tests. Aggregate stage
+prepare/verify actions are removed; stale callers must route directly to the owning
+package Gate/Build. Explicit repo governance is separate and is never package release test evidence.
 
-Stage Freeze 后只调用纯验证入口：
-
-```text
-node automation/proflow-maintenance/proflow-stage-verify.mjs \
-  --stage monitor-controlled-group
-```
-
-它执行 targeted Monitor tests、Extension typecheck/build、governance check、workspace self-tests 和 diff check，并记录每一步耗时；不会修改 test-governance inventory。
-
-Stage Verify PASS、正式版本/materialization/adoption 完成后：
-
-```text
-node automation/proflow-maintenance/proflow-monitor-acceptance.mjs \
-  --mode SAME_SCENE
-```
-
-它最多返回 `READY_FOR_VISUAL_EYES`；最终视觉 PASS 仍由模型对 owner-known current Monitor tab 做一次 EYES 判定。
+After owning package Gate PASS and formal version/materialization/adoption, use
+`proflow-monitor-acceptance.mjs --mode SAME_SCENE`, followed by final visual EYES.
 
 ## Browser action ownership
 
