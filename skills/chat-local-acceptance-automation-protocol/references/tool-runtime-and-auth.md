@@ -10,7 +10,7 @@
 → tools/local-dev | codegraph | repomix | browser
 ```
 
-生成 profile 位于 `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/.runtime/profiles/`。`~/.config/tunnel-client/{local-dev,codegraph,repomix,playwright-chrome}.yaml` 是退役位置；四个 legacy alias profile 出现即 ownership conflict。第三方状态仍在 `/Users/agent/Library/Application Support/tunnel-client/health/<alias>.url` 等 tunnel-client 自有目录。
+生成 profile 位于 `/Users/agent/Desktop/proton-workspace/automation/gptweb-mcp/.runtime/profiles/`。`~/.config/tunnel-client/{local-dev,codegraph,repomix,playwright-chrome}.yaml` 是退役位置；四个 legacy alias profile 出现即 ownership conflict。第三方状态仍在 `~/Library/Application Support/tunnel-client/health/<alias>.url` 等 tunnel-client 自有目录。
 
 `SHARED-RUNTIME-OWNER-FIRST`：先读 canonical owner，再决定 reconnect/recover。**Do not directly spawn a second raw MCP server**，也不要创建第二 LaunchAgent、watchdog、broker 或 Browser controller。当前 workspace 没有 gptweb-mcp LaunchAgent。
 
@@ -76,7 +76,13 @@ canonical control probe
 
 Browser auth 是 owning CLI/PTTY 的同一 transaction continuation：CLI 明确 AUTH_EXPIRED/NOT_LOGGED_IN → Browser 完成人机步骤 → 回到原 transaction → CLI 重新确认。timeout/UNKNOWN 不是“未登录”，不能触发盲目 login。
 
-Microsoft Dev Tunnel 统一走 `/Users/agent/Desktop/proton-workspace/scripts/dev-tunnel auth [--login]`。Dev Tunnel auth 和 Playwright `connect.html` 是不同 surface。
+ProFlow Microsoft Dev Tunnel 统一由已安装 npm package `@tomflow/proflow-dev-tunnel` 拥有。正常入口是：
+
+```text
+/Users/agent/Desktop/proton-workspace/node_modules/.bin/proflow-dev-tunnel setup --workspace /Users/agent/Desktop/proton-workspace
+```
+
+若 package setup 明确要求 GitHub 授权，Browser 只完成人机授权并回到原 package transaction；不得恢复已退役的 workspace `scripts/dev-tunnel` / `automation/dev-tunnel` / `tools/dev-tunnel` 第二 owner。Dev Tunnel auth 和 Playwright `connect.html` 是不同 surface。
 
 ## RECOVER
 

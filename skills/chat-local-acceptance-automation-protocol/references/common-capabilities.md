@@ -108,6 +108,6 @@ Capability = what action is needed. Failure class = why the route is blocked.
 - Local Dev: local CLI `ACT`, process/file/runtime `IDENTIFY`, `WAIT/LISTEN`, owner `VERIFY`.
 - PTY/expect: deterministic interactive CLI `ACT/WAIT/LISTEN`.
 - `/Users/agent/Desktop/proton-workspace/scripts/gptweb-mcp`: canonical shared MCP lifecycle for `CONNECT/RECOVER`.
-- `/Users/agent/Desktop/proton-workspace/scripts/dev-tunnel`: Microsoft Dev Tunnel lifecycle/auth authority.
+- ProFlow Microsoft Dev Tunnel lifecycle/auth: installed npm package `@tomflow/proflow-dev-tunnel` via `node_modules/.bin/proflow-dev-tunnel`; workspace scripts/automation/tools do not duplicate it.
 
 Script promotion/anti-wrapper policy is owned only by [skill-evolution.md](skill-evolution.md).
