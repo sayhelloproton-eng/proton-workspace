@@ -23,4 +23,4 @@ tools/
 - 长驻服务和一次性 CLI 都可以属于同一个能力域，不再为“service”另造顶层目录；
 - 从 legacy 仓迁入的 Tool 必须先解除旧产品身份和路径耦合，并通过独立验证。
 
-`dev-tunnel/` 拥有 Microsoft Dev Tunnel CLI 解析、缓存和原生命令 adapter；生命周期归 automation/dev-tunnel。
+Microsoft Dev Tunnel CLI resolver、auth、lifecycle 与 readiness 已全部归 `@tomflow/proflow-dev-tunnel` npm package；`tools/dev-tunnel` 退役，避免形成第二实现。

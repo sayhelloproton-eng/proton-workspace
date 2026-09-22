@@ -40,6 +40,12 @@ There is no release-many/release-all action. Tests never publish a real or tempo
 # 仅在没有 current/live Monitor 时创建首班
 node automation/proflow-maintenance/monitor-initialize.mjs \
   --shift-id <initialShiftId>
+# 若返回 requiredAction=READ_CURRENT_PROJECT_EYES：
+# → current canonical Playwright browser_evaluate(function="() => location.href")
+# → 将 Browser 返回 URL 原样交回同一 action：
+node automation/proflow-maintenance/monitor-initialize.mjs \
+  --shift-id <initialShiftId> \
+  --project-observed-url <currentProjectUrl>
 
 # 机械解析本班必须读取的 authority 路径
 node automation/proflow-maintenance/monitor-context-manifest.mjs
@@ -51,15 +57,36 @@ node automation/proflow-maintenance/monitor-claim.mjs \
 # 收敛真实运行环境，只修可机械修复的 first divergence
 node automation/proflow-maintenance/proflow-real-scene-ready.mjs
 
-# Monitor Browser 唯一项目动作
+# ProFlow 专属 Dev Tunnel convergence；正常由 REAL_SCENE_READY 内部调用
+node automation/proflow-maintenance/proflow-dev-tunnel-ready.mjs
+
+# Monitor Browser 唯一常规项目动作
 node automation/proflow-maintenance/monitor-browser-step.mjs
+
+# 仅当 Browser Step 返回 MONITOR_CONTROLLED_GROUP_ADOPTION_REQUIRED
+node automation/proflow-maintenance/monitor-browser-adopt.mjs prepare
+# → current canonical Playwright browser_run_code_unsafe(filename=<actionFile>)
+node automation/proflow-maintenance/monitor-browser-adopt.mjs complete \
+  --action-file <actionFile>
+# complete 只清理 one-shot actionFile；随后总是重新调用 monitor-browser-step.mjs 做权威 reconcile/continue
+# Playwright 结果 UNKNOWN 时也禁止先重放 adopt；只有 Browser Step 再次返回 ADOPTION_REQUIRED 才允许重新 prepare
 
 # 交接时模型只提交结构化 continuation 语义
 node automation/proflow-maintenance/monitor-handoff-finalize.mjs \
   --input-file <continuation.json>
+
+# Product Campaign owner fresh-read 为 CLOSED 后终止整个产品迭代 Loop
+node automation/proflow-maintenance/monitor-loop-finalize.mjs \
+  --campaign-ref <campaignRef> --product-owner-closed-read
 ```
 
 模型仍负责 authority 理解、工程/产品语义判断、continuation/blocker/notification 语义。模型不再负责首班 bootstrap/create、boot/takeover 串联、Browser reconnect/group、Tunnel lifecycle、Extension reload/adoption、Platform start/status 编排、handoff complete/bootstrap/create。
+
+## Model cognitive boundary
+
+正常 successor 的路由 authority 只在 `skills/proflow-chat-loop/SKILL.md`。模型保持 one-receipt working set：authority 只读一次，claim 一次，之后只消费最新高层 Action receipt 的 `status / stage / firstDivergence / requiredAction / next`。正常运行不得为了“理解下一步”读取本目录脚本源码、helper 实现、PID/process tree、pnpm/node_modules、Chrome 细节或 Tunnel identity。
+
+本目录允许内部 mechanics 演进，但只要高层 contract/receipt 不变，就不应把新内部步骤暴露给 model-facing surface。低层 helper 只服务高层 Action；不得因为某个 timeout/warning 让 successor 模型临场拆解成一串诊断命令。
 
 ## Owner gate actions
 
@@ -101,7 +128,18 @@ EXTENSION_ARTIFACT_GUARD
 → DONE | BLOCKED | UNKNOWN
 ```
 
-任何 Browser action 之前，`monitor-browser-step.mjs` 都先要求 source/static artifact、materialization marker、materialized payload 与 package-owned version facts 精确一致。same-version stale artifact 也必须 BLOCKED，且不能打开 Browser boundary。`tools/browser/playwright-controlled-group.py` 是唯一通用 tab/group owner；ProFlow helper 不复制 `chrome.tabs.group` / `chrome.tabGroups` / `chrome.windows.create`。physical restore 只有在 durable identity 唯一证明 exact existing Chat 没有物理 tab 时才允许，且固定 `about:blank → group → readback → exact existing conversation URL`。Browser control UNKNOWN 永远不等于 Chat absent。
+任何 Browser action 之前，`monitor-browser-step.mjs` 都先要求 source/static artifact、materialization marker、materialized payload 与 package-owned version facts 精确一致。same-version stale artifact 也必须 BLOCKED，且不能打开 Browser boundary。`tools/browser/playwright-controlled-group.py` 是唯一通用 tab/group owner；ProFlow helper 不复制 `chrome.tabs.group` / `chrome.tabGroups` / `chrome.windows.create`。所有 Browser 动作固定先定位 canonical controlled group，再从该 group membership 定位 exact target tab，最后执行动作；普通 inspect/sync/fingerprint/reload/retire 不允许先全局搜 tab，也不允许自动收编组外目标。physical restore 遇到 group miss 只返回 `MONITOR_CONTROLLED_GROUP_ADOPTION_REQUIRED`。此时唯一恢复动作是 `monitor-browser-adopt prepare → current canonical Playwright 执行 actionFile → monitor-browser-adopt complete → rerun monitor-browser-step`；Automation 从 Node owner 取 exact conversationLocator + chatId，模型不选择 tab/group/window。`complete` 只清理 one-shot artifact，Browser Step fresh-read 当前 Node owner 并负责 reconcile；即使 Playwright 返回 UNKNOWN，也不得在 Browser Step readback 前重放 adopt。Browser control UNKNOWN 永远不等于 Chat absent。
+
+## ProFlow Dev Tunnel
+
+`proflow-dev-tunnel-ready.mjs` 是 thin convergence adapter。它不拥有 tunnel identity、port、auth、Microsoft CLI resolver 或 host lifecycle；这些全部由 workspace 已安装 npm package `@tomflow/proflow-dev-tunnel` 拥有。Action 只调用 package bin：
+
+```text
+node_modules/.bin/proflow-dev-tunnel setup --workspace <workspace>
+node_modules/.bin/proflow-dev-tunnel verify --workspace <workspace>
+```
+
+随后只读取 package-owned `.proflow/runtime/external-resources/dev-tunnel/setup.json`，映射成 `proflow.dev-tunnel-ready.v1` receipt。workspace legacy `scripts/dev-tunnel`、`automation/dev-tunnel`、`tools/dev-tunnel` 均已退役，不得恢复第二 owner。
 
 ## Context ownership
 
@@ -115,7 +153,11 @@ Monitor runtime/lifecycle → Node Monitor Service
 
 ## Initial Monitor
 
-`monitor-initialize.mjs` 仅在没有 current/live Monitor 且没有冲突 pending bootstrap 时合法。它生成固定 Initial BOOTSTRAP、调用低层 stage owner、执行 `monitor-browser-step.mjs` 并按 Node state 对账，返回 `REGISTERED | STAGED | BLOCKED | UNKNOWN`。它不会替新 Chat claim。
+`monitor-initialize.mjs` 仅在没有 current/live Monitor 且没有冲突 pending bootstrap 时合法。若 Node 已有 durable `projectLocator`，它机械启用 Loop 后继续；若 `projectLocator` 为空，它先返回 `BLOCKED / requiredAction=READ_CURRENT_PROJECT_EYES`，要求当前 canonical Playwright 只读 `browser_evaluate(function="() => location.href")`，再将 Browser 返回 URL 原样通过 `--project-observed-url` 交回同一 action。模型不得解析、裁剪、拼 slug、硬编码或推断 locator；Node 将当前 Project conversation/root URL canonicalize，并把 `projectLocator + loopEnabled=true` 作为一次 config update 持久化后，才允许生成固定 Initial BOOTSTRAP、调用低层 stage owner、执行 `monitor-browser-step.mjs` 并按 Node state 对账。它返回 `REGISTERED | STAGED | BLOCKED | UNKNOWN`，且不会替新 Chat claim。
+
+## Product iteration completion
+
+Product owner fresh-read 证明 active Campaign 为 `CLOSED` 后，模型调用 `monitor-loop-finalize.mjs`。它不重新判断产品是否完成，只消费这个 owner fact；机械要求无 pending bootstrap/dispatch/UNKNOWN/handoff/hold/turn-wake/successor，调用 Node sole lifecycle operation `loop.complete`，readback `loopEnabled=false`、`mutationMode=NONE`、`drive.next=null`，随后唯一 checkpoint 收成 `LOOP_COMPLETE / nextShiftId=none`，不创建 successor。active Loop 禁止通过 generic config 直接 disable。
 
 ## Handoff
 
@@ -162,9 +204,14 @@ Mutation helper 使用稳定 identity。timeout/transport loss 先由同一高�
 
 - `tools/browser/playwright-controlled-group.py`：通用 controlled-group owner。
 - `automation/gptweb-mcp/playwright-ready.py`：Browser readiness convergence。
-- `scripts/dev-tunnel ready`：Dev Tunnel readiness convergence。
-- `automation/proflow-browser-extension/adopt.mjs`：Extension adoption convergence。
+- `@tomflow/proflow-dev-tunnel` npm package：Dev Tunnel CLI resolver、auth、workspace credential、host lifecycle 与 readiness 唯一 owner。
+- `proflow-dev-tunnel-ready.mjs`：thin package adapter；只调用已安装 package 的 `setup / verify` 并映射 receipt。
+- `browser-extension-update.mjs`：ProFlow Extension package identity / Extension ID / currentness + generic reload orchestration。
+- `lib/browser-extension-artifact-guard.mjs`：source/materialization identity guard。
+- `tools/browser/chrome-extension-refresh.mjs`：跨项目通用 Extension reload owner。
 - `proflow-real-scene-ready.mjs`：跨 runtime owner 收敛，不建立第二 truth。
+- `monitor-browser-adopt.mjs`：仅在 group miss 后消费 Node-owned exact target，准备 current-session generic adopt action，并在执行后清理 one-shot artifact；reconcile 统一回到 `monitor-browser-step.mjs`，不复制 Browser group primitives。
+- `monitor-loop-finalize.mjs`：消费 Product-owner `Campaign CLOSED` attestation，机械完成 Monitor Loop terminal convergence，不建立第二份产品完成 truth。
 - Node Monitor Service：Temporary Chat Loop sole lifecycle writer。
 - Execution Runtime + Browser effect owner：真实 create/submit side-effect truth。
 - Model：authority 阅读、工程/产品语义、continuation 与最终视觉判定。

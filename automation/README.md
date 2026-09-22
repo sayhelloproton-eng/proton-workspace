@@ -8,11 +8,12 @@
 Browser control ready
 → automation/gptweb-mcp/playwright-ready.py
 
-Microsoft Dev Tunnel ready
-→ scripts/dev-tunnel ready <id> <port>
+ProFlow Dev Tunnel ready
+→ automation/proflow-maintenance/proflow-dev-tunnel-ready.mjs
+→ installed @tomflow/proflow-dev-tunnel package setup / verify
 
-ProFlow Browser Extension adoption
-→ automation/proflow-browser-extension/adopt.mjs
+ProFlow Browser Extension update/reload
+→ automation/proflow-maintenance/browser-extension-update.mjs
 
 ProFlow Initial Monitor creation
 → automation/proflow-maintenance/monitor-initialize.mjs
@@ -45,9 +46,9 @@ ProFlow Monitor real Acceptance preparation
 ## Owners
 
 - `gptweb-mcp/`：Secure MCP runtime lifecycle/watchdog + Playwright deterministic connect/recover；tab/group primitive 属于 `tools/browser/`。
-- `dev-tunnel/`：Microsoft Dev Tunnel auth / ensure / host / recover。
-- `proflow-browser-extension/`：ProFlow Extension registration/reload/runtime adoption。
-- `proflow-maintenance/`：Temporary Chat Loop lifecycle / Browser / Real Scene / final-gate workflow。
+- `proflow-maintenance/`：Temporary Chat Loop lifecycle / Browser / Real Scene / final-gate workflow，以及 ProFlow-specific Extension 与 Dev Tunnel package convergence。
+- ProFlow Dev Tunnel auth / CLI / lifecycle / readiness 只属于 npm package `@tomflow/proflow-dev-tunnel`；workspace 不复制其实现。
+- 通用 Extension reload 原子能力属于 `tools/browser/chrome-extension-refresh.mjs`，Automation 只提供项目 identity/policy。
 - `feishu-knowledge-publish/`：飞书知识发布 deterministic workflow。
 
 规则：不复制 `tools/` 原子能力；不把判断/方法论塞进 automation；Skill 只保留策略、权限和验收语义。稳定的跨 owner 顺序、readback、UNKNOWN reconciliation 应下沉为单一 convergence action。

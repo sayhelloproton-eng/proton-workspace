@@ -32,9 +32,9 @@ automation/gptweb-mcp/.runtime/profiles/
 
 当前不维护 `gptweb-mcp` LaunchAgent。其他 Chat 不得自行恢复 LaunchAgent、第二套 profile、broker、watchdog 或生命周期 owner。
 
-Microsoft Dev Tunnel 走 `scripts/dev-tunnel → automation/dev-tunnel → tools/dev-tunnel`；ProFlow 产品自带 npm tunnel 不归这里接管。
+ProFlow Microsoft Dev Tunnel 的唯一实现与生命周期 owner 是已安装 npm package `@tomflow/proflow-dev-tunnel`。workspace 不再维护 `scripts/dev-tunnel`、`automation/dev-tunnel` 或 `tools/dev-tunnel` 第二实现；`automation/proflow-maintenance/proflow-dev-tunnel-ready.mjs` 只调用 package bin 的 `setup / verify` 并消费 package-owned runtime facts。
 
-飞书发布规则由 `skills/feishu-knowledge-publish/` 拥有，稳定机械流程由 `automation/feishu-knowledge-publish/` 执行，底层直接使用官方 `lark-cli`。ProFlow Extension 的稳定 reload 执行器由 `automation/proflow-browser-extension/` 拥有，Acceptance Skill 只拥有调用条件和 PASS 语义。
+飞书发布规则由 `skills/feishu-knowledge-publish/` 拥有，稳定机械流程由 `automation/feishu-knowledge-publish/` 执行，底层直接使用官方 `lark-cli`。ProFlow Extension 的项目级 update/reload 编排由 `automation/proflow-maintenance/browser-extension-update.mjs` 拥有；跨项目通用 reload 原子能力由 `tools/browser/chrome-extension-refresh.mjs` 拥有；Acceptance Skill 只拥有调用条件和 PASS 语义。
 
 workspace 自有 runtime/cache/log 跟随 owner 聚合到 `tools/**/.runtime/`、`automation/**/.runtime/` 或对应 Skill 私有 evidence 目录。项目施工产物不得把 Engineering Skill `.runtime` 当公共临时目录。
 
