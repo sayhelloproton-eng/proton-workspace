@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { printJson, valueArg } from "./lib/monitor-api-client.mjs";
@@ -28,9 +27,6 @@ function subprocess(command, args, timeout = 90_000) {
     result,
   };
 }
-async function json(path) {
-  return JSON.parse(await readFile(path, "utf8"));
-}
 function statusFacts(output) {
   const text = output ?? "";
   const ready = /PLATFORM_READY=YES/.test(text);
@@ -49,20 +45,12 @@ function readPlatformStatus() {
     throw new Error(result.error || "PLATFORM_STATUS_UNKNOWN");
   return statusFacts(result.result.stdout);
 }
-async function tunnelIdentity() {
-  const tunnel = await json(
-    join(workspace, ".proflow/runtime/modules/dev-tunnel/shared-facts.json"),
-  );
-  const gateway = await json(
-    join(workspace, ".proflow/runtime/modules/agent-gateway/shared-facts.json"),
-  );
-  const tunnelId = tunnel?.facts?.tunnelId;
-  const localBaseUrl = gateway?.facts?.localBaseUrl;
-  if (typeof tunnelId !== "string" || typeof localBaseUrl !== "string")
-    throw new Error("DEV_TUNNEL_SHARED_FACTS_MISSING");
-  const port = Number(new URL(localBaseUrl).port);
-  if (!Number.isInteger(port) || port < 1) throw new Error("GATEWAY_PORT_INVALID");
-  return { tunnelId, port };
+function parseJsonOutput(output, label) {
+  try {
+    return JSON.parse((output ?? "").trim());
+  } catch {
+    throw new Error(`${label}_RESULT_INVALID`);
+  }
 }
 function classifyFailure(error) {
   return /UNKNOWN|TIMEOUT|TRANSPORT/i.test(error ?? "")
@@ -122,26 +110,44 @@ async function main() {
     status = readPlatformStatus();
   }
 
-  const tunnel = await tunnelIdentity();
   const tunnelReady = subprocess(
-    join(workspace, "scripts/dev-tunnel"),
-    ["ready", tunnel.tunnelId, String(tunnel.port)],
-    220_000,
+    process.execPath,
+    [
+      join(
+        workspace,
+        "automation/proflow-maintenance/proflow-dev-tunnel-ready.mjs",
+      ),
+      "--workspace",
+      workspace,
+    ],
+    1_260_000,
   );
+  let tunnel;
+  try {
+    tunnel = parseJsonOutput(tunnelReady.result.stdout, "PROFLOW_DEV_TUNNEL_READY");
+  } catch {
+    tunnel = null;
+  }
+  const tunnelReceiptValid = !tunnelReady.result.error && !tunnelReady.result.signal &&
+    tunnel?.contract === "proflow.dev-tunnel-ready.v1" && tunnel.workspace === workspace &&
+    ["READY", "ACTION_REQUIRED", "UNKNOWN"].includes(tunnel.status);
+  const tunnelIsReady = tunnelReceiptValid && tunnelReady.ok && tunnel.status === "READY";
   actions.push({
     action: "DEV_TUNNEL_READY",
-    status: tunnelReady.ok ? "PASS" : "FAIL",
-    detail: tunnelReady.ok ? tunnelReady.result.stdout.trim() : tunnelReady.error,
+    status: tunnelIsReady ? "PASS" : "FAIL",
+    detail: tunnelReceiptValid ? tunnel : "DEV_TUNNEL_PACKAGE_EXECUTION_UNKNOWN",
   });
-  if (!tunnelReady.ok) {
+  if (!tunnelIsReady) {
+    const status = tunnelReceiptValid && tunnel.status === "ACTION_REQUIRED" ? "BLOCKED" : "UNKNOWN";
     printJson({
       contract: "proflow.real-scene-ready.v1",
-      status: classifyFailure(tunnelReady.error),
+      status,
       firstDivergence: "DEV_TUNNEL",
-      reason: tunnelReady.error,
+      reason: tunnelReceiptValid ? tunnel.reason : "DEV_TUNNEL_PACKAGE_EXECUTION_UNKNOWN",
+      requiredAction: tunnelReceiptValid ? tunnel.requiredAction : "RECONCILE_DEV_TUNNEL_OWNER",
       actions,
     });
-    process.exit(classifyFailure(tunnelReady.error) === "UNKNOWN" ? 2 : 3);
+    process.exitCode = status === "UNKNOWN" ? 2 : 3;
     return;
   }
 

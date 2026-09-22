@@ -79,10 +79,10 @@ Browser auth 是 owning CLI/PTTY 的同一 transaction continuation：CLI 明确
 ProFlow Microsoft Dev Tunnel 统一由已安装 npm package `@tomflow/proflow-dev-tunnel` 拥有。正常入口是：
 
 ```text
-/Users/agent/Desktop/proton-workspace/node_modules/.bin/proflow-dev-tunnel setup --workspace /Users/agent/Desktop/proton-workspace
+node automation/proflow-maintenance/proflow-dev-tunnel-ready.mjs
 ```
 
-若 package setup 明确要求 GitHub 授权，Browser 只完成人机授权并回到原 package transaction；不得恢复已退役的 workspace `scripts/dev-tunnel` / `automation/dev-tunnel` / `tools/dev-tunnel` 第二 owner。Dev Tunnel auth 和 Playwright `connect.html` 是不同 surface。
+Action 薄委托 workspace 已安装的 `node_modules/.bin/proflow-dev-tunnel reconcile --workspace <workspace> --json`，只消费结构化 receipt。若包要求 GitHub 授权，Browser 只完成人机授权并回到原 package transaction。Dev Tunnel auth 和 Playwright `connect.html` 是不同 surface。
 
 ## RECOVER
 

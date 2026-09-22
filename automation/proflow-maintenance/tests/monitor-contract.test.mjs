@@ -155,10 +155,9 @@ test("ProFlow Dev Tunnel action delegates solely to the installed npm package ow
   const realScene = await source("proflow-real-scene-ready.mjs");
   for (const required of [
     "node_modules/.bin/proflow-dev-tunnel",
-    "node_modules/@tomflow/proflow-dev-tunnel",
-    '"setup"',
-    '"verify"',
-    "proflow.dev-tunnel-setup.v2",
+    '"reconcile"',
+    '"--json"',
+    "proflow.dev-tunnel-cli.v1",
     "proflow.dev-tunnel-ready.v1",
     "@tomflow/proflow-dev-tunnel",
     "COMPLETE_DEV_TUNNEL_AUTH",

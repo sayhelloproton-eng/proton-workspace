@@ -10,7 +10,7 @@ Browser control ready
 
 ProFlow Dev Tunnel ready
 → automation/proflow-maintenance/proflow-dev-tunnel-ready.mjs
-→ installed @tomflow/proflow-dev-tunnel package setup / verify
+→ node_modules/.bin/proflow-dev-tunnel reconcile --workspace <workspace> --json
 
 ProFlow Browser Extension update/reload
 → automation/proflow-maintenance/browser-extension-update.mjs

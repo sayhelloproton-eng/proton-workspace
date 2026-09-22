@@ -135,11 +135,10 @@ EXTENSION_ARTIFACT_GUARD
 `proflow-dev-tunnel-ready.mjs` 是 thin convergence adapter。它不拥有 tunnel identity、port、auth、Microsoft CLI resolver 或 host lifecycle；这些全部由 workspace 已安装 npm package `@tomflow/proflow-dev-tunnel` 拥有。Action 只调用 package bin：
 
 ```text
-node_modules/.bin/proflow-dev-tunnel setup --workspace <workspace>
-node_modules/.bin/proflow-dev-tunnel verify --workspace <workspace>
+node_modules/.bin/proflow-dev-tunnel reconcile --workspace <workspace> --json
 ```
 
-随后只读取 package-owned `.proflow/runtime/external-resources/dev-tunnel/setup.json`，映射成 `proflow.dev-tunnel-ready.v1` receipt。workspace legacy `scripts/dev-tunnel`、`automation/dev-tunnel`、`tools/dev-tunnel` 均已退役，不得恢复第二 owner。
+Action 仅消费包的 `proflow.dev-tunnel-cli.v1` JSON，映射成 `proflow.dev-tunnel-ready.v1`；不读取包的状态文件。缺少回执或执行结果不确定时返回 UNKNOWN，不回退、不重复调用。包负责认证恢复、双 token 原子替换和 host 恢复。
 
 ## Context ownership
 
@@ -205,7 +204,7 @@ Mutation helper 使用稳定 identity。timeout/transport loss 先由同一高�
 - `tools/browser/playwright-controlled-group.py`：通用 controlled-group owner。
 - `automation/gptweb-mcp/playwright-ready.py`：Browser readiness convergence。
 - `@tomflow/proflow-dev-tunnel` npm package：Dev Tunnel CLI resolver、auth、workspace credential、host lifecycle 与 readiness 唯一 owner。
-- `proflow-dev-tunnel-ready.mjs`：thin package adapter；只调用已安装 package 的 `setup / verify` 并映射 receipt。
+- `proflow-dev-tunnel-ready.mjs`：thin package adapter；只调用已安装 package 的 `reconcile --json` 并映射 receipt。
 - `browser-extension-update.mjs`：ProFlow Extension package identity / Extension ID / currentness + generic reload orchestration。
 - `lib/browser-extension-artifact-guard.mjs`：source/materialization identity guard。
 - `tools/browser/chrome-extension-refresh.mjs`：跨项目通用 Extension reload owner。

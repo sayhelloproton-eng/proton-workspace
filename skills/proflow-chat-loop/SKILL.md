@@ -271,6 +271,8 @@ node automation/proflow-maintenance/proflow-real-scene-ready.mjs
 
 It first enforces Extension artifact identity before any Browser/Platform recovery, then composes official Platform status, Browser Extension adoption, Dev Tunnel readiness, formal Platform start only when Platform names it, Monitor state adoption, Browser readiness and final Platform readback.
 
+ProFlow Dev Tunnel sole implementation owner is `@tomflow/proflow-dev-tunnel`. The model-facing `proflow-dev-tunnel-ready.mjs` only delegates to the workspace-installed `node_modules/.bin/proflow-dev-tunnel reconcile --workspace <workspace> --json` and maps its `proflow.dev-tunnel-cli.v1` receipt. The package owns auth recovery, atomic credential rotation, tunnel/port/host reconciliation and read-only verify. Every non-READY action receipt names `requiredAction`; UNKNOWN stops without replay. The model supplies no tunnel, port, token, PID or Microsoft CLI details.
+
 It does not build/version/publish, perform human setup, invent a second runtime, or bypass an owner. Human/setup/spec/version/materialization divergence returns BLOCKED; uncertain effects return UNKNOWN.
 
 For a changed implementation:
