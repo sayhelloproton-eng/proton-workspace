@@ -129,7 +129,9 @@ async function main() {
     tunnel = null;
   }
   const tunnelReceiptValid = !tunnelReady.result.error && !tunnelReady.result.signal &&
-    tunnel?.contract === "proflow.dev-tunnel-ready.v1" && tunnel.workspace === workspace &&
+    tunnel?.contract === "proflow.dev-tunnel-ready.v1" &&
+    tunnel.owner === "@tomflow/proflow-dev-tunnel" &&
+    tunnel.workspace === workspace &&
     ["READY", "ACTION_REQUIRED", "UNKNOWN"].includes(tunnel.status);
   const tunnelIsReady = tunnelReceiptValid && tunnelReady.ok && tunnel.status === "READY";
   actions.push({
@@ -265,7 +267,10 @@ async function main() {
       current: finalStatus.current,
       next: finalStatus.next,
     },
-    tunnel,
+    tunnel: {
+      owner: tunnel.owner,
+      publicBaseUrl: tunnel.publicBaseUrl,
+    },
     actions,
   });
 }
